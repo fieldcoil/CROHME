@@ -2,12 +2,12 @@
 '''
 ###########################################################################
 #
-# CSCI-737 Pattern Recognition
-# Fall, 2013
-# Project #3
+# CROHME: Competition on Recognition of Online Handwritten 
+#         Mathematical Expressions
+# Spring, 2014
 # 
 # Author: Wei Yao (wxy3806_AT_rit.edu) & Fan Wang (fxw6000_AT_rit.edu)
-# Date: Dec 11 2013
+# Date: Feb 17 2014
 #
 ###########################################################################
 
@@ -897,6 +897,8 @@ def train(args):
             testset = 3
                   
         rY, rX, rIdx = genTrainDataSet(AllTrainData, testset, symbDict)
+
+        writeSVMinput("trianGridSearch_{}".format(subset), rY, rX)
         
         rX_scale = []
         for X in rX:
@@ -905,7 +907,7 @@ def train(args):
         scale_cof = scaleData(rX_scale)
         
         start = time.clock()
-        m = svmutil.svm_train(rY, rX_scale, '-c 512 -g 0.03125 -b 1')
+        m = svmutil.svm_train(rY, rX_scale, '-c 32 -g 0.03125 -b 1')
         elapsed = (time.clock() - start)
         
         f = open("svm_traning.log", 'a')

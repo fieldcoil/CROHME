@@ -883,6 +883,21 @@ class InkML(object):
                     fdIdxs.append(dIdxs)
         
         if len(fbIdxs) > 0: # There is at least one fraction in the expression
+            
+            # we need to solve the multi fraction problem
+            for i in range(len(fbIdxs)-1):
+                nIdxs1 = fnIdxs[i]
+                dIdxs1 = fdIdxs[i]
+                bIdx1 = fbIdxs[i]
+                for j in range(i+1, len(fbIdxs)):
+                    nIdxs2 = fnIdxs[j]
+                    dIdxs2 = fdIdxs[j]
+                    bIdx2 = fbIdxs[j]
+                    removeDuplicatedIdx(nIdxs1, bIdx1, nIdxs2, bIdx2)
+                    removeDuplicatedIdx(nIdxs1, bIdx1, dIdxs2, bIdx2)
+                    removeDuplicatedIdx(dIdxs1, bIdx1, nIdxs2, bIdx2)
+                    removeDuplicatedIdx(dIdxs1, bIdx1, dIdxs2, bIdx2)
+            
             removedIdx = []
             nums = []
             dens = []
@@ -1715,6 +1730,19 @@ def sortSYMB(symbList):
 #                 symbList.insert(sup_start, sup_sign)
             
     return symbList
+
+    def removeDuplicatedIdx(nIdxs1, bIdx1, nIdxs2, bIdx2):
+        for i in range(len(nIdxs1)-1, -1, -1):
+            for j in range(len(nIdxs2)-1, -1, -1):
+                if nIdxs1[i] == nIdxs2[j]:
+                    if bIdx1 in nIdxs2:
+                        del nIdxs2[j]
+                    elif bIdx2 in nIdxs1:
+                        del nIdxs1[i]
+                    else:
+                        # This situation shouldn't happen
+                        pass
+    # end of removeDuplicatedIdx
 
 if __name__ == '__main__':
     im1 = InkML('../TrainINKML_v3/MfrDB/MfrDB0045.inkml')
