@@ -1329,6 +1329,99 @@ def segment(args):
      
 # end of segment
 
+
+def parsingtrain(args):
+    TrainDataPath = args.input
+    assert os.path.isdir(TrainDataPath), "The input directory is not exist!"
+         
+    foldsfile = args.folds
+    assert os.path.isfile(foldsfile), "The folds file is not exist!"
+ 
+    trainset = args.trainset
+    assert len(trainset) > 0, "The set of train data is not specified!"
+    
+    nProcesses = args.processes
+         
+    h_foldsfile = open(foldsfile, 'r')
+    folds = pickle.load(h_foldsfile)
+    h_foldsfile.close()
+         
+    AllTrainData = readAllTrainData(TrainDataPath)
+         
+    print "apply the fold on training data ...",
+    applyFolds(AllTrainData, folds)
+    print "Done!"
+    
+#     start = time.time()
+#     p = multiprocessing.Pool(processes=nProcesses)        
+#     AllTrainData = p.map(fp, AllTrainData)
+#     p.close()
+#     p.join()
+
+    for IM in AllTrainData:
+        IM.formCharPair() 
+'''    
+    print "run time = {}".format(time.time() - start)
+    for subset in trainset:
+        if subset == '01':
+            testset = 2
+        elif subset == '02':
+            testset = 1
+        elif subset == '12':
+            testset = 0
+        else:
+            testset = 3
+    
+        rY, rX, rIdx = genSegTrainDataSet(AllTrainData, testset)
+        
+#         hf = open("rY_{}".format(subset), 'w')
+#         pickle.dump(rY, hf)
+#         hf.close()
+#         hf = open("rX_{}".format(subset), 'w')
+#         pickle.dump(rX, hf)
+#         hf.close()
+        
+        fList = np.array(SVM2list(rX))
+        PCAer = PCA(fList)
+        Wt = PCAer.Wt
+        mu = PCAer.mu
+        sigma = PCAer.sigma
+        
+        hf = open("PCA_{}.dump".format(subset), 'w')
+        pickle.dump(Wt, hf)
+        pickle.dump(mu, hf)
+        pickle.dump(sigma, hf)
+        hf.close()
+        
+        pcList = PCAer.Y
+        pcList = pcList[:,:nSegPCA]
+        rX = list2SVM(pcList)
+        
+#         writeSVMinput("input_{}".format(subset), rY, rX)
+        
+        rX_scale = []
+        for X in rX:
+            rX_scale.append(X.copy())
+                 
+        scale_cof = scaleData(rX_scale)
+         
+        start = time.clock()
+        m = svmutil.svm_train(rY, rX_scale, '-c 32 -g 0.5 -b 1')
+        elapsed = (time.clock() - start)
+         
+        f = open("seg_traning.log", 'a')
+        f.write("seg_model_{}, training time: {}\n".format(subset,elapsed))
+        f.close()
+        print  "seg_model_{}, training time: {}\n".format(subset,elapsed)
+               
+        svmutil.svm_save_model("seg_model_{}".format(subset), m)
+               
+        hf = open("seg_scaling_{}".format(subset), 'w')
+        pickle.dump(scale_cof, hf)
+        hf.close()
+'''               
+# end of parsingtrain
+
 def parsing(args):
     inputPath = args.input
     
@@ -1578,6 +1671,13 @@ if __name__ == '__main__':
     parser_segment.add_argument("-o", "--output", required=True, help="specify the output filename or directory (depends on the input)")
     parser_segment.set_defaults(func=segment)
        
+    parser_parsingtrain = subparsers.add_parser('parsingtrain', help="train the parsing classifier from the training data")
+    parser_parsingtrain.add_argument("-i", "--input", required=True, help="specify the directory which contains the training data")
+    parser_parsingtrain.add_argument("-f", "--folds", default="folds.dump", help="specify the file which stores the splitting information")
+    parser_parsingtrain.add_argument("-s", "--trainset", choices=['01','02','12','all'], action="append", help="specify the set of training data")
+    parser_parsingtrain.add_argument("-p", "--processes", default=6, type=int, choices=range(1, 25), help="specify the number of processes when extracting the features of stroke pairs")
+    parser_parsingtrain.set_defaults(func=parsingtrain)
+    
     parser_parsing = subparsers.add_parser('parsing', help="segment, classify and parse the test data by the specified parameter")
     parser_parsing.add_argument("-i", "--input", required=True, help="specify a test file or a directory which contains the test files")
     parser_parsing.add_argument("-f", "--folds", help="specify the file which stores the splitting information")

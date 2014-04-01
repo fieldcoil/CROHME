@@ -64,6 +64,19 @@ tagMainSymb = {
     "mn" : -1
     }
 
+nameCharPair = [              
+               'R'          ,
+               'beginSUP'   ,
+               'beginSUB'   ,
+               'endSUP'     ,
+               'endSUB'     ,
+               'SUP2SUB'    ,
+               'SUB2SUP'    ]
+
+tagCharPair = {}
+for i in range(len(nameCharPair)):
+    tagCharPair[nameCharPair[i]] = i
+
 class InkML(object):
     '''
     classdocs
@@ -89,6 +102,8 @@ class InkML(object):
         self.XML_GT = []
         self.hasPair = False
         self.pair = [];
+        self.hasCharPair = False
+        self.charPair = []
         self.fold = 0;
         self.tree = None
         self.symbList = None
@@ -994,7 +1009,94 @@ class InkML(object):
         x_cen = (x_max + x_min) / 2.0
         y_cen = (y_max + y_min) / 2.0
 
-        return (x_min, y_min, x_max, y_max, x_cen, y_cen)    # end of symbBox(self,symbId)
+        return (x_min, y_min, x_max, y_max, x_cen, y_cen)
+    # end of symbBox(self,symbId)
+    
+    def sortSymbId(self):
+        '''
+        sort symbols according to the stroke ids
+        '''
+        
+        symbs = self.symbolTruth
+        symbIdList = []
+        
+        for symbId in symbs.iterkeys():
+            s = symbId, min(symbs[symbId]['strokes'])
+            symbIdList.append(s)
+
+        sortedSymbIdList = [i[0] for i in sorted(symbIdList, key=lambda x:int(x[1]))]
+        return sortedSymbIdList
+    # end of sortSymbId(self):
+    
+    def formCharPair(self):
+        print "Forming character pairs from file: {} ...".format(self.filename),
+        # preprocessing
+        # 1. Duplicate point filtering
+        for stroke in self.stroke.itervalues():
+            stroke['trace1'] = removeDuplicatePoint(stroke['trace'])
+        
+        # 2. Smoothing
+        for stroke in self.stroke.itervalues():
+            smooth(stroke['trace1'])
+ 
+        # 3. Size normalization
+        normalizeExp(self.stroke)
+
+        SegSRT = {}
+        getSegSRT(self.XML_GT, SegSRT)
+                
+        symbIdList = self.sortSymbId()
+        if len(symbIdList) > 1:
+            for i, symbId in enumerate(symbIdList[:-1]):
+                k = '[{}],[{}]'.format(symbId, symbIdList[i+1])
+                if SegSRT.has_key(k):
+                    pair = {}
+                    pair['symbols'] = [symbId, symbIdList[i+1]]
+                    pair['truth'] = None
+                    if SegSRT[k] == 'R':
+                        pair['truth'] = tagCharPair['R']
+                    elif SegSRT[k] == 'Sub':
+                        pair['truth'] = tagCharPair['beginSUB']
+                        pair2 = findEndOfSux(self.XML_GT, 'msub', symbId)
+                        if len(pair2) > 0:
+                            self.charPair.append(pair2)
+                    elif SegSRT[k] == 'Sup':
+                        pair['truth'] = tagCharPair['beginSUP']
+                        pair2 = findEndOfSux(self.XML_GT, 'msup', symbId)
+                        if len(pair2) > 0:
+                            self.charPair.append(pair2)
+                    else:
+                        # we don't handle others
+                        pass
+                    
+                    if pair['truth'] != None:
+                        pair['features'] = self.extractCharPairSCF(pair['symbols'])
+                        self.charPair.append(pair)
+            
+        if len(self.charPair) > 0:
+            self.hasCharPair = True
+        print "Done!"
+    # end of formCharPair(self)
+    
+    
+    def extractCharPairSCF(self,symbList):
+        assert len(symbList)==2, "The char pair should contains two symbols"
+        symb1 = self.symbolTruth[symbList[0]]
+        symb2 = self.symbolTruth[symbList[1]]
+        
+        
+        
+        features = []
+        return features
+    # end of extractCharPairSCF(self,symbList):
+    
+    def plot(self):
+        import matplotlib.pyplot as plt
+        for key,strk in im1.stroke.iteritems():
+            plt.plot(strk['trace1'][:,0], -strk['trace1'][:,1])
+            plt.text(strk['trace1'][0,0], -strk['trace1'][0,1],key)
+        plt.show()
+    # end of plot(self):
 # end of class InkML(object):
 
 def Load_xml_truth(truth, data):
@@ -1730,49 +1832,107 @@ def sortSYMB(symbList):
 #                 symbList.insert(sup_start, sup_sign)
             
     return symbList
+# end of sortSYMB(symbList):
 
-    def removeDuplicatedIdx(nIdxs1, bIdx1, nIdxs2, bIdx2):
-        for i in range(len(nIdxs1)-1, -1, -1):
-            for j in range(len(nIdxs2)-1, -1, -1):
-                if nIdxs1[i] == nIdxs2[j]:
-                    if bIdx1 in nIdxs2:
-                        del nIdxs2[j]
-                    elif bIdx2 in nIdxs1:
-                        del nIdxs1[i]
+def removeDuplicatedIdx(nIdxs1, bIdx1, nIdxs2, bIdx2):
+    for i in range(len(nIdxs1)-1, -1, -1):
+        for j in range(len(nIdxs2)-1, -1, -1):
+            if nIdxs1[i] == nIdxs2[j]:
+                if bIdx1 in nIdxs2:
+                    del nIdxs2[j]
+                elif bIdx2 in nIdxs1:
+                    del nIdxs1[i]
+                else:
+                    # This situation shouldn't happen
+                    pass
+# end of removeDuplicatedIdx
+
+def findEndOfSux(current, name, mainSymbId, parent=None):
+    pair = {}
+    n = len(current)
+    for i in range(n):
+        exp = current[i]
+        if exp.has_key('name') and exp.has_key('mainSymbId'):
+            if (exp['name'] == name) and (exp['mainSymbId'] == mainSymbId):
+                pair = {}
+                if i < (n-1):
+                    nextExp = current[i+1]
+                    if len(exp['children']) > 0:
+                        symb1 = exp['children'][-1];
                     else:
-                        # This situation shouldn't happen
-                        pass
-    # end of removeDuplicatedIdx
+                        symb1 = exp['id']
+                        
+                    if len(nextExp['children']) > 0:
+                        symb2 = nextExp['children'][0];
+                    else:
+                        symb2 = nextExp['id']
+                        
+                    pair['symbols'] = [symb1, symb2]
+                    pair['features'] = []
+                    if name == 'msup':
+                        pair['truth'] = tagCharPair['endSUP']
+                    elif name == 'msub':
+                        pair['truth'] = tagCharPair['endSUB']
+                break
+            elif (exp['name'] == 'msubsup' ) and ('msub' == name) and (exp['mainSymbId'] == mainSymbId):
+                pair = {}
+                if len(exp['sub']) == 3:
+                    if len(exp['sub'][1]['children']) > 0:
+                        symb1 = exp['sub'][1]['children'][-1]
+                    else:
+                        symb1 = exp['sub'][1]['id']
+                    
+                    if len(exp['sub'][2]['children']) > 0:
+                        symb2 = exp['sub'][2]['children'][0]
+                    else:
+                        symb2 = exp['sub'][2]['id']
+                    
+                    pair['symbols'] = [symb1, symb2]
+                    pair['features'] = []
+                    pair['truth'] = tagCharPair['SUP2SUB']
+                break
+            elif (exp['name'] == 'msubsup' ) and ('msup' == name) and (exp['mainSymbId'] == mainSymbId):
+                pair = {}
+                if len(exp['sub']) == 3:
+                    if len(exp['sub'][2]['children']) > 0:
+                        symb1 = exp['sub'][2]['children'][-1]
+                    else:
+                        symb1 = exp['sub'][2]['id']
+                    
+                    if len(exp['sub'][1]['children']) > 0:
+                        symb2 = exp['sub'][1]['children'][0]
+                    else:
+                        symb2 = exp['sub'][1]['id']
+                    
+                    pair['symbols'] = [symb1, symb2]
+                    pair['features'] = []
+                    pair['truth'] = tagCharPair['SUB2SUP']
+                break
+            else:
+                pair = findEndOfSux(exp['sub'], name, mainSymbId, current)
+        else:
+            pair = findEndOfSux(exp['sub'], name, mainSymbId, current)
+    return pair
+# end of findEndOfSu(SegSRT,a):
+
+def plotXML_GT(current, level):
+    for i in range(len(current)):
+        
+        print '{}: {}'.format(i,current[i])
 
 if __name__ == '__main__':
-    im1 = InkML('../TrainINKML_v3/MfrDB/MfrDB0045.inkml')
+    im1 = InkML('../TrainINKML_v3/expressmatch/81_daniel.inkml')
     # im1 = InkML('../TrainINKML_v3/MathBrush/2009210-947-105.inkml')
     # im1 = InkML('../TrainINKML_v3/KAIST/traindata2_25_sub_88.inkml')
 
-    print im1.XML_GT[0]['name']
-    #print im1.stroke['24']
-#     import time
-#     start = time.clock()
-#     im1.formPair()
-#     im1.loadPairTruth()
-#     print "Run time = {}".format(time.clock() - start)
+    im1.formCharPair()
     
-#     for symb in im1.symbolTruth.itervalues():
-#         print symb['strokes']
-#     
-#     for pair in im1.pair:
-#         print pair['strokes'],
-#         print pair['truth']
-#         print pair['G'][17]
-#         print pair['C']
-#     
-#     import matplotlib.pyplot as plt
-#     for key,strk in im1.stroke.iteritems():
-#         plt.plot(strk['trace1'][:,0], -strk['trace1'][:,1])
-#         plt.text(strk['trace1'][0,0], -strk['trace1'][0,1],key)
-#     plt.show()
-#     print im1.symbol['\\cdot_2']
-#     print im1.strokeTruth
-#     print im1.stroke['2']
-#     print im1.XML_GT
-    pass
+    for p in im1.charPair:
+        print p
+    im1.plot()
+    print im1.symbol
+
+    
+
+    
+
