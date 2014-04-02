@@ -37,6 +37,10 @@ Nsampledpoints = 30
 # Number of points in a stroke after resampling
 Nstrokesampledpoints = 30;
 
+#  distance (nSHP) angle (mSHP)
+nSHP = 15
+mSHP = 20
+
 # define edges creation depending of the mathML tag : {"tag" => liste of edges with label },  index -1 means that there are no corresponding child but the current node should be used (eq msqrt and mfrac)
 tagToSRT = {
     "mrow" : [[0,1,'R']],
@@ -1070,23 +1074,111 @@ class InkML(object):
                         pass
                     
                     if pair['truth'] != None:
-                        pair['features'] = self.extractCharPairSCF(pair['symbols'])
                         self.charPair.append(pair)
-            
-        if len(self.charPair) > 0:
+        n =  len(self.charPair)
+        if n > 0:
+            for i in range(n-1,-1,-1) :
+                p = self.charPair[i]
+                if (self.isIgnoredSymbol(p['symbols'][0]) or 
+                    self.isIgnoredSymbol(p['symbols'][1])):
+                    del self.charPair[i]
+                else:
+                    p['features'] = self.extractCharPairSCF(p['symbols'])
             self.hasCharPair = True
         print "Done!"
     # end of formCharPair(self)
     
+    def isIgnoredSymbol(self, symbId):
+        lab = self.symbolTruth[symbId]['lab']
+        if (symbId[0] == '_') and ((lab == '-') or (lab =='\\sqrt')):
+            return True
+        else:
+            return False
+    # end of  isIgnoredSymbol(self, symbol):
     
-    def extractCharPairSCF(self,symbList):
+    def extractCharPairSCF(self, symbList, GT=True):
         assert len(symbList)==2, "The char pair should contains two symbols"
-        symb1 = self.symbolTruth[symbList[0]]
-        symb2 = self.symbolTruth[symbList[1]]
+        if GT:
+            symb1 = self.symbolTruth[symbList[0]]
+            symb2 = self.symbolTruth[symbList[1]]
+        else:
+            symb1 = self.symbol[symbList[0]]
+            symb2 = self.symbol[symbList[1]]
         
+        strkId = symb1['strokes'][0]
+        pts1 = self.stroke[strkId]['trace1']
+        strkId = symb2['strokes'][0]
+        pts2 = self.stroke[strkId]['trace1']
         
+        if len(symb1['strokes'])>1:
+            for strkId in symb1['strokes'][1:]:
+                pts1 = np.vstack((pts1, self.stroke[strkId]['trace1']))
+                        
+        if len(symb2['strokes'])>1:
+            for strkId in symb2['strokes'][1:]:
+                pts2 = np.vstack((pts2, self.stroke[strkId]['trace1']))
+        
+        Ga = np.mean(pts1,0)
+        Gb = np.mean(pts2,0)
+        G = (Ga + Gb)/2
+        print G
+        
+        x1 = pts1[:,0] - G[0]
+        y1 = pts1[:,1] - G[1]
+        
+        x2 = pts2[:,0] - G[0]
+        y2 = pts2[:,1] - G[1]
+        
+        mag1 = np.sqrt(x1**2+y1**2)
+        ang1 = np.arctan2(y1, x1)
+
+        mag2 = np.sqrt(x2**2+y2**2)
+        ang2 = np.arctan2(y2, x2)
+        
+        mag_max1 = np.max(mag1)
+        mag_max2 = np.max(mag2)
+        mag_max = max(mag_max1, mag_max2)
+        
+        mag_grid = np.array(range(nSHP+1)) * mag_max / nSHP
+        m2 = mSHP/2
+        ang_grid = np.array(range(-m2, m2+1)) * np.pi /  m2
+        
+        mag_split1 = []
+        mag_split2 = []
+        for mag_idx in range(1, mag_grid.shape[0]):
+            mag_lower = mag_grid[mag_idx - 1]
+            mag_upper = mag_grid[mag_idx]
+            t = ((mag_lower < mag1) & (mag1 <= mag_upper))
+            mag_split1.append(t)
+            t = ((mag_lower < mag2) & (mag2 <= mag_upper))
+            mag_split2.append(t)
+        
+        ang_split1 = []
+        ang_split2 = []
+        for ang_idx in range(1, ang_grid.shape[0]):
+            ang_lower = ang_grid[ang_idx - 1]
+            ang_upper = ang_grid[ang_idx]
+            t = ((ang_lower < ang1) & (ang1 <= ang_upper))
+            ang_split1.append(t)
+            t = ((ang_lower < ang2) & (ang2 <= ang_upper))
+            ang_split2.append(t)
         
         features = []
+        for i in range(len(ang_split1)):
+            a1 = ang_split1[i]
+            a2 = ang_split2[i]
+            for j in range(len(mag_split1)):
+                m1 = mag_split1[j]
+                m2 = mag_split2[j]
+                f1 = sum(a1 * m1)
+                f2 = sum(a2 * m2)
+                if (f1 == 0) and (f2 == 0):
+                    features.append( 0)
+                elif (f1 > f2):
+                    features.append(-1)
+                else: 
+                    features.append(+1)
+        
         return features
     # end of extractCharPairSCF(self,symbList):
     
@@ -1930,7 +2022,8 @@ if __name__ == '__main__':
     for p in im1.charPair:
         print p
     im1.plot()
-    print im1.symbol
+    print im1.symbolTruth
+
 
     
 

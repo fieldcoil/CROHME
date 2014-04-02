@@ -812,6 +812,41 @@ def genSegTestDataSet(IMs):
     return (testingY, testingX, testingIdx)
 # end of genSegTestDataSet
 
+def formParsingFeature(im):
+    xList = []
+    yList = []
+    idxList = []
+    for pair in im.charPair:
+        k ="{}_{}_{}".format(im.filename,pair['symbols'][0],pair['symbols'][1])
+        y = pair['truth']
+        x = {}
+        fIdx = 1
+            
+        for a in pair['features']:
+            x[fIdx] = float(a)
+            fIdx += 1
+        xList.append(x)
+        yList.append(y)
+        idxList.append(k)
+    return (xList, yList, idxList)
+# end of formSegFeature
+
+def genParsingTrainDataSet(IMs, Imid):
+    trainningX = []
+    trainningY = []
+    trainningIdx = []
+    
+    for im in IMs:
+        if (im.hasCharPair) & (im.fold != Imid):
+            # trainning
+            x,y,f = formParsingFeature(im)
+            trainningX.extend(x)
+            trainningY.extend(y)
+            trainningIdx.extend(f)
+    return (trainningY, trainningX, trainningIdx)
+# end of genSegTrainDataSet
+
+
 def center(x, mu, sigma):
     'center the data using the mean and sigma from training set a'
     return (x - mu)/sigma
@@ -1352,7 +1387,7 @@ def parsingtrain(args):
     applyFolds(AllTrainData, folds)
     print "Done!"
     
-#     start = time.time()
+    start = time.time()
 #     p = multiprocessing.Pool(processes=nProcesses)        
 #     AllTrainData = p.map(fp, AllTrainData)
 #     p.close()
@@ -1360,7 +1395,7 @@ def parsingtrain(args):
 
     for IM in AllTrainData:
         IM.formCharPair() 
-'''    
+    
     print "run time = {}".format(time.time() - start)
     for subset in trainset:
         if subset == '01':
@@ -1372,7 +1407,7 @@ def parsingtrain(args):
         else:
             testset = 3
     
-        rY, rX, rIdx = genSegTrainDataSet(AllTrainData, testset)
+        rY, rX, rIdx = genParsingTrainDataSet(AllTrainData, testset)
         
 #         hf = open("rY_{}".format(subset), 'w')
 #         pickle.dump(rY, hf)
@@ -1387,7 +1422,7 @@ def parsingtrain(args):
         mu = PCAer.mu
         sigma = PCAer.sigma
         
-        hf = open("PCA_{}.dump".format(subset), 'w')
+        hf = open("PCA_parsing_{}.dump".format(subset), 'w')
         pickle.dump(Wt, hf)
         pickle.dump(mu, hf)
         pickle.dump(sigma, hf)
@@ -1397,7 +1432,7 @@ def parsingtrain(args):
         pcList = pcList[:,:nSegPCA]
         rX = list2SVM(pcList)
         
-#         writeSVMinput("input_{}".format(subset), rY, rX)
+        writeSVMinput("input_parsing_{}".format(subset), rY, rX)
         
         rX_scale = []
         for X in rX:
@@ -1409,17 +1444,17 @@ def parsingtrain(args):
         m = svmutil.svm_train(rY, rX_scale, '-c 32 -g 0.5 -b 1')
         elapsed = (time.clock() - start)
          
-        f = open("seg_traning.log", 'a')
-        f.write("seg_model_{}, training time: {}\n".format(subset,elapsed))
+        f = open("parsing_traning.log", 'a')
+        f.write("parsing_model_{}, training time: {}\n".format(subset,elapsed))
         f.close()
-        print  "seg_model_{}, training time: {}\n".format(subset,elapsed)
+        print  "parsing_model_{}, training time: {}\n".format(subset,elapsed)
                
-        svmutil.svm_save_model("seg_model_{}".format(subset), m)
+        svmutil.svm_save_model("parsing_model_{}".format(subset), m)
                
-        hf = open("seg_scaling_{}".format(subset), 'w')
+        hf = open("parsing_scaling_{}".format(subset), 'w')
         pickle.dump(scale_cof, hf)
         hf.close()
-'''               
+               
 # end of parsingtrain
 
 def parsing(args):
