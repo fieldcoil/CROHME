@@ -1480,6 +1480,15 @@ def parsing(args):
     pcafile = args.pca.format(trainset)
     assert os.path.isfile(pcafile), "The PCA parameter file is not exist!"
     
+    parsingmodelfile = args.parsingmodel.format(trainset)
+    assert os.path.isfile(parsingmodelfile), "The parsing model file is not exist!"
+    
+    parsingscalingfile = args.parsingscaling.format(trainset)
+    assert os.path.isfile(parsingscalingfile), "The paring scaling parameter file is not exist!"
+    
+    parsingpcafile = args.parsingpca.format(trainset)
+    assert os.path.isfile(parsingpcafile), "The parsing PCA parameter file is not exist!"
+    
     output = args.output
          
     foldsfile = args.folds
@@ -1503,14 +1512,32 @@ def parsing(args):
     segscaling_cof = pickle.load(hf)
     hf.close()
     
+    hf = open(parsingscalingfile, 'r')
+    parsingscaling_cof = pickle.load(hf)
+    hf.close()
+    
+    
     hf = open(pcafile, 'r')
     Wt = pickle.load(hf)
     mu = pickle.load(hf)
     sigma = pickle.load(hf)
     hf.close()
     
+    hf = open(parsingpcafile, 'r')
+    parsingWt = pickle.load(hf)
+    parsingmu = pickle.load(hf)
+    parsingsigma = pickle.load(hf)
+    hf.close()
+    
     classify_m = svmutil.svm_load_model(modelfile)
     segment_m = svmutil.svm_load_model(segmodelfile)
+    parsing_m = svmutil.svm_load_model(parsingmodelfile)
+    
+    parsingArg = {'scaling':   parsingscaling_cof,
+                   'Wt':        parsingWt,
+                   'mu':        parsingmu,
+                   'sigma':     parsingsigma,
+                   'm':         parsing_m}
     
     if os.path.isdir(inputPath):
         AllTrainData = readAllTrainData(inputPath)
@@ -1612,13 +1639,12 @@ def parsing(args):
     cykpaser = CYK.CYK('OurGrammar.xml')
     cykpaser.toCNF()
     
-    scaleData(eX, scaling_cof)
 
     nSecc = 0
     nFail = 0
     for im in testData:
         print "The Latex expression of {} is:".format(im.filename)
-        im.generateSymbList()
+        im.generateSymbList(parsingArg)
         sec,mat,tree = cykpaser.parse(im.symbList)
         im.parsingSecc = sec
         for s in im.symbList:
@@ -1721,9 +1747,12 @@ if __name__ == '__main__':
     parser_parsing.add_argument("-s", "--trainset", choices=['01','02','12','all'], default='all', help="specify the set of training data")
     parser_parsing.add_argument("-m", "--model", default="svm_model_{}", help="specify the model file for classification")
     parser_parsing.add_argument("-g", "--segmodel", default="seg_model_{}", help="specify the model file for segmentation")
+    parser_parsing.add_argument("-d", "--parsingmodel", default="parsing_model_{}", help="specify the model file for parsing")
     parser_parsing.add_argument("-a", "--scaling", default="scaling_{}",  help="specify the file which saves the scaling parameters")
     parser_parsing.add_argument("-l", "--segscaling", default="seg_scaling_{}",  help="specify the file which saves the segmentation scaling parameters")
+    parser_parsing.add_argument("-n", "--parsingscaling", default="parsing_scaling_{}",  help="specify the file which saves the parsing scaling parameters")
     parser_parsing.add_argument("-c", "--pca", default="PCA_{}.dump", help="specify the file which saves the PCA paramenters")
+    parser_parsing.add_argument("-r", "--parsingpca", default="PCA_{}.dump", help="specify the file which saves the PCA paramenters")
     parser_parsing.add_argument("-p", "--processes", default=6, type=int, choices=range(1, 25), help="specify the number of processes when extracting the features of stroke pairs")
     parser_parsing.add_argument("-o", "--output", required=True, help="specify the output filename or directory (depends on the input)")
     parser_parsing.set_defaults(func=parsing)
