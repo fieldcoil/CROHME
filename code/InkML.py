@@ -1053,14 +1053,18 @@ class InkML(object):
                 bIdxs = sbIdxs[i]
                 pIdxs = spIdxs[i]
                 
+                # assume the length of power = 1
                 while len(pIdxs) > 1:
                     buf = pIdxs.pop()
                     bIdxs.insert(0,buf)
                 
+                # if there is no base
                 if len(bIdxs) < 1:
-                    if len(pIdxs) > 0:
+                    if len(pIdxs) > 0: 
+                        # change power to base
                         bIdxs.append(pIdxs.pop())
                     else:
+                        # the next symbol after the \\sqrt will be the base
                         bIdxs.append(sqIdx+1)
                     
                 if len(pIdxs) == 1:
