@@ -36,6 +36,7 @@ import multiprocessing
 from matplotlib.mlab import PCA
 import CYK
 import itertools
+from routines import SVM2list, list2SVM, project, scaleData
 
 # define the path where the training data is located
 TrainDataPath = "../TrainINKML_v3"
@@ -511,30 +512,6 @@ def genTestDataSet(IMs, symbDict):
     return (testingY, testingX, testingIdx)
 # end of genTestDataSet
 
-def scaleData(x, cof=None):
-    if cof == None:
-        cof = {}
-        xmax = {}
-        xmin ={}
-        for (k, v) in x[0].iteritems():
-            xmax[k] = v 
-            xmin[k] = v
-        for l in x[1:]:
-            for (k,v) in l.iteritems():
-                if v > xmax[k]:
-                    xmax[k] = v
-                if v < xmin[k]:
-                    xmin[k] = v
-                    
-        for k in x[0].iterkeys():
-            c = [xmin[k], xmax[k]-xmin[k]]
-            cof[k] = c
-    
-    for l in x:
-        for k in l.iterkeys():
-            l[k] = 2 * (l[k] - cof[k][0]) / cof[k][1] - 1
-    return cof
-# end of genDataSet
 
 def writeSVMinput(filename, y, x):
     f = file(filename, 'w')
@@ -546,27 +523,6 @@ def writeSVMinput(filename, y, x):
     f.close()
 # end of writeSVMinput
 
-def SVM2list(X):
-    xlist = []
-    for sub in X:
-        newsub = []
-        for idx in range(1,len(sub)+1):
-            newsub.append(sub[idx])
-        xlist.append(newsub)
-    return xlist
-# end of SVM2list
-
-def list2SVM(x):
-    xSVM = []
-    for line in x:
-        sub = {}
-        fIdx = 1
-        for a in line:
-            sub[fIdx] = float(a)
-            fIdx += 1
-        xSVM.append(sub)
-    return xSVM
-# end of list2SVM(x)
 
 def knn(rX, rY, eX, eY, k=1):
     train = np.array(SVM2list(rX))
@@ -846,24 +802,6 @@ def genParsingTrainDataSet(IMs, Imid):
     return (trainningY, trainningX, trainningIdx)
 # end of genSegTrainDataSet
 
-
-def center(x, mu, sigma):
-    'center the data using the mean and sigma from training set a'
-    return (x - mu)/sigma
-# end of center(x, mu, sigma):
-
-def project(Wt, mu, sigma, x):
-    'project x onto the principle axes, dropping any axes where fraction of variance<minfrac'
-    x = np.asarray(x)
-
-    if (x.shape[-1]!=Wt.shape[-1]):
-        raise ValueError('Expected an array with dims[-1]==%d'%Wt.shape[-1])
-
-
-    Y = np.dot(Wt, center(x, mu, sigma).T).T
-
-    return Y
-# end of project(Wt, mu, sigma, x):
 
 def split(args):
     
@@ -1752,7 +1690,7 @@ if __name__ == '__main__':
     parser_parsing.add_argument("-l", "--segscaling", default="seg_scaling_{}",  help="specify the file which saves the segmentation scaling parameters")
     parser_parsing.add_argument("-n", "--parsingscaling", default="parsing_scaling_{}",  help="specify the file which saves the parsing scaling parameters")
     parser_parsing.add_argument("-c", "--pca", default="PCA_{}.dump", help="specify the file which saves the PCA paramenters")
-    parser_parsing.add_argument("-r", "--parsingpca", default="PCA_{}.dump", help="specify the file which saves the PCA paramenters")
+    parser_parsing.add_argument("-r", "--parsingpca", default="PCA_parsing_{}.dump", help="specify the file which saves the PCA paramenters")
     parser_parsing.add_argument("-p", "--processes", default=6, type=int, choices=range(1, 25), help="specify the number of processes when extracting the features of stroke pairs")
     parser_parsing.add_argument("-o", "--output", required=True, help="specify the output filename or directory (depends on the input)")
     parser_parsing.set_defaults(func=parsing)

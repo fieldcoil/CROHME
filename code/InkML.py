@@ -29,6 +29,7 @@ import sys
 import re
 import collections
 import numpy as np
+from routines import SVM2list, list2SVM, project, scaleData
 
 
 # Number of points in a symbol after resampling
@@ -41,6 +42,7 @@ Nstrokesampledpoints = 30;
 nSHP = 15
 mSHP = 20
 
+nSegPCA = 100
 # define edges creation depending of the mathML tag : {"tag" => liste of edges with label },  index -1 means that there are no corresponding child but the current node should be used (eq msqrt and mfrac)
 tagToSRT = {
     "mrow" : [[0,1,'R']],
@@ -843,7 +845,7 @@ class InkML(object):
 
     # end of extractC(self, pairIds):
     
-    def generateSymbList(self, parsingArg):
+    def generateSymbList_d(self, parsingArg):
         #self.generateSymbList2()
         try:
             self.generateSymbList2(parsingArg)
@@ -862,7 +864,8 @@ class InkML(object):
             self.symbList.append(symb)
     # end of generateSymbList(self)
     
-    def generateSymbList2(self, parsingArg):
+    def generateSymbList(self, parsingArg):
+        self.preFormCharPair()
         symbList = []
         for key in self.symbol.iterkeys():
             box = np.array(self.symbBox(key))
@@ -1045,7 +1048,8 @@ class InkML(object):
                     sqIdxs.append(sIdx)
                     spIdxs.append(pIdxs)
                     sbIdxs.append(bIdxs)
-    
+                    
+        symbOut = []
         if len(sqIdxs) > 0: # There is at least one \sqrt sign in the expression 
     #         print "there are {} \\sqrt".format(len(sqIdxs))
             for i in range(len(sqIdxs)-1, -1, -1):
@@ -1080,35 +1084,6 @@ class InkML(object):
                         pIdx += 1
                         sqIdxs[i] = pIdx_old
                     
-                    box = symbList[max(bIdxs)]['box'][:]
-                    box[0]=box[2]
-                    box[4]=box[2]
-                    height = symbList[max(bIdxs)]['height']
-                    closeb = {'id':'NULL', 'lab':'}','box':box,'width':0., 'height':height}
-                    symbList.insert(max(bIdxs)+1, closeb)
-                    
-                    box = symbList[min(bIdxs)]['box'][:]
-                    box[2]=box[0]
-                    box[4]=box[0]
-                    height = symbList[min(bIdxs)]['height']
-                    openb = {'id':'NULL', 'lab':'{','box':box,'width':0., 'height':height}
-                    symbList.insert(min(bIdxs), openb)
-                    
-                    box = symbList[pIdx]['box'][:]
-                    box[0]=box[2]
-                    box[4]=box[2]
-                    height = symbList[pIdx]['height']
-                    closeb = {'id':'NULL', 'lab':']','box':box,'width':0., 'height':height}
-                    symbList.insert(pIdx+1, closeb)
-                    
-                    symbList[pIdx]['signed'] = True
-                    
-                    box = symbList[pIdx]['box'][:]
-                    box[2]=box[0]
-                    box[4]=box[0]
-                    height = symbList[pIdx]['height']
-                    openb = {'id':'NULL', 'lab':'[','box':box,'width':0., 'height':height}
-                    symbList.insert(pIdx, openb)
                 else:
                     if sqIdx > min(bIdxs):
                         sqrt = symbList.pop(sqIdx)
@@ -1119,151 +1094,73 @@ class InkML(object):
                             if bIdx < sqIdx:
                                 bIdxs[j] += 1
                         sqIdxs[i] = bIdxs_min
-                    
-                    box = symbList[max(bIdxs)]['box'][:]
+            # end of for i in range(len(sqIdxs)-1, -1, -1):
+            
+            currentIdx = 0;
+            for i in range(len(sqIdxs)):
+                sqIdx = sqIdxs[i]
+                bIdxs = sbIdxs[i]
+                pIdxs = spIdxs[i]
+                
+                # the symbols before \\sqrt
+                sub = symbList[currentIdx:sqIdx]
+                if len(sub) > 0:
+                    symbOut += self.parsingSux(sub, parsingArg)
+                
+                # \\sqrt
+                symbOut += symbList[sqIdx:sqIdx+1]
+                
+                # power
+                if len(pIdxs) == 1:
+                    pIdx = pIdxs[0]
+                    box = symbList[pIdx]['box'][:]
                     box[0]=box[2]
                     box[4]=box[2]
-                    height = symbList[max(bIdxs)]['height']
-                    closeb = {'id':'NULL', 'lab':'}','box':box,'width':0., 'height':height}
-                    symbList.insert(max(bIdxs)+1, closeb)
-                    
-                    box = symbList[min(bIdxs)]['box'][:]
+                    height = symbList[pIdx]['height']
+                    closeb = {'id':'NULL', 'lab':']','box':box,'width':0., 'height':height}
+
+                    box = symbList[pIdx]['box'][:]
                     box[2]=box[0]
                     box[4]=box[0]
-                    height = symbList[min(bIdxs)]['height']
-                    openb = {'id':'NULL', 'lab':'{','box':box,'width':0., 'height':height}
-                    symbList.insert(min(bIdxs), openb)
+                    height = symbList[pIdx]['height']
+                    openb = {'id':'NULL', 'lab':'[','box':box,'width':0., 'height':height}
+                    
+                    symbOut += [openb] + symbList[pIdx] + [closeb]
+                
+                # base 
+                box = symbList[max(bIdxs)]['box'][:]
+                box[0]=box[2]
+                box[4]=box[2]
+                height = symbList[max(bIdxs)]['height']
+                closeb = {'id':'NULL', 'lab':'}','box':box,'width':0., 'height':height}
+                     
+                box = symbList[min(bIdxs)]['box'][:]
+                box[2]=box[0]
+                box[4]=box[0]
+                height = symbList[min(bIdxs)]['height']
+                openb = {'id':'NULL', 'lab':'{','box':box,'width':0., 'height':height}
+                
+                sub = symbList[min(bIdxs):max(bIdxs)+1]
+                symbOut += [openb] + self.parsingSux(sub, parsingArg) + [closeb]
+                
+                currentIdx = max(bIdxs)+1
+            
+            # the symbols after the \\sqrt
+            sub = symbList[currentIdx:]
+            if len(sub)> 0:
+                symbOut += self.parsingSux(sub, parsingArg)
+        else:
+            if len(symbList) > 0:
+                symbOut = self.parsingSux(symbList, parsingArg)
         # end of if len(sqIdxs) > 0: 
-            
-        # find sub and sup:
-#         highest = max(symbList, key=lambda s: s['height'])
-#         candidate = []
-#         for symb in symbList:
-#             if symb['lab'] != '\\sqrt':
-#                 candidate.append(symb)
-#         if len(candidate) > 4:
-#             avg_cen_y = np.mean([s['box'][5] for s in candidate])
-#             for i in range(len(candidate)-1, -1, -1):
-#                 if abs(candidate[i]['box'][5]-avg_cen_y) > highest['height']*.25:
-#                     candidate.pop(i)
-#             if len(candidate) > 1:
-#                 highest = max(candidate, key=lambda s: s['height'])
-#     
-#         subIdxs=[]
-#         supIdxs=[]
-#         for (i,symb) in enumerate(symbList):
-#             if symb['id'] == 'NULL':
-#                 continue
-#             elif symb.has_key('signed'):
-#                 if symb['signed']:
-#                     continue
-#                 
-#             if symb['height'] < 0.6*highest['height']:
-#                 if symb['box'][5] < highest['box'][5] - highest['height'] * 0.2:
-#                     supIdxs.append(i)
-#                 elif symb['box'][5] > highest['box'][5] + highest['height'] * 0.2:
-#                     subIdxs.append(i)
-#             elif symb['height'] < 0.8*highest['height']:     
-#                 if symb['box'][5] < highest['box'][5] - highest['height'] * 0.3:
-#                     supIdxs.append(i)
-#                 elif symb['box'][5] > highest['box'][5] + highest['height'] * 0.3:
-#                     subIdxs.append(i)
-#             else:
-#                 if symb['box'][5] < highest['box'][5] - highest['height'] * 0.4:
-#                     supIdxs.append(i)
-#                 elif symb['box'][5] > highest['box'][5] + highest['height'] * 0.4:
-#                     subIdxs.append(i)
-#         
-#         if len(subIdxs) > 0:
-#             if subIdxs[0] == 0:
-#                 del subIdxs[0]
-#                 supIdxs.insert(0,1)
-#         if len(supIdxs) > 0:
-#             if supIdxs[0] == 0:
-#                 del supIdxs[0]
-#                 subIdxs.insert(0,1)
-#                 
-#         su = subIdxs[:]
-#         su.extend(supIdxs)
-#         su=sorted(su)
-#         
-#         if len(su) > 0:
-#             start = [su[0]]
-#             end = []
-#             mast = []
-#             for i in range(len(su)-1):
-#                 if su[i]+1 == su[i+1]:
-#                     continue
-#                 elif su[i]+2 == su[i+1]:
-#                     if ((hop(symbList[su[i]]['box'],symbList[su[i]+1]['box']) > symbList[su[i]]['width']*.5) or
-#                         (hop(symbList[su[i+1]]['box'],symbList[su[i]+1]['box']) > symbList[su[i+1]]['width']*.5)):
-#                         mast.append(su[i]+1)
-#                     else:
-#                         end.append(su[i])
-#                         start.append(su[i+1])
-#                 else:
-#                     end.append(su[i])
-#                     start.append(su[i+1])
-#             end.append(su[-1])
-#             
-#             for i in range(len(start)-1, -1, -1):
-#                 for idxs in range(start[i],end[i]+1):
-#                     if idxs in mast:
-#                         symbList.insert(start[i],symbList.pop(idxs))
-#                         start[i] += 1
-#                         break
-#                 sup_start = start[i]
-#                 current = sup_start
-#                 nSup = 0
-#                 for idx in range(start[i], end[i]+1):
-#                     if symbList[idx]['box'][5] < highest['box'][5]:
-#                         symbList.insert(current, symbList.pop(idx))
-#                         current += 1
-#                         nSup += 1
-#                 sub_end = end[i]
-#                 
-#                 nSub = sub_end - sup_start + 1 - nSup
-#                 
-#                 if nSub > 0:
-#                     sub_start = sup_start + nSup
-#                     box = symbList[sub_end]['box'][:]
-#                     box[0]=box[2]
-#                     box[4]=box[2]
-#                     height = symbList[sub_end]['height']
-#                     closeb = {'id':'NULL', 'lab':'}','box':box,'width':0., 'height':height}
-#                     symbList.insert(sub_end+1, closeb)
-#                     
-#                     box = symbList[sub_start]['box'][:]
-#                     box[2]=box[0]
-#                     box[4]=box[0]
-#                     height = symbList[sub_start]['height']
-#                     openb = {'id':'NULL', 'lab':'{','box':box,'width':0., 'height':height}
-#                     symbList.insert(sub_start, openb)
-#                     sub_sign = {'id':'NULL', 'lab':'_','box':box,'width':0., 'height':height}
-#                     symbList.insert(sub_start, sub_sign)
-#                     
-#                 if nSup > 0:
-#                     sup_end = sup_start + nSup - 1
-#                     box = symbList[sup_end]['box'][:]
-#                     box[0]=box[2]
-#                     box[4]=box[2]
-#                     height = symbList[sup_end]['height']
-#                     closeb = {'id':'NULL', 'lab':'}','box':box,'width':0., 'height':height}
-#                     symbList.insert(sup_end+1, closeb)
-#                     
-#                     box = symbList[sup_start]['box'][:]
-#                     box[2]=box[0]
-#                     box[4]=box[0]
-#                     height = symbList[sup_start]['height']
-#                     openb = {'id':'NULL', 'lab':'{','box':box,'width':0., 'height':height}
-#                     symbList.insert(sup_start, openb)
-#                     sup_sign = {'id':'NULL', 'lab':'^','box':box,'width':0., 'height':height}
-#                     symbList.insert(sup_start, sup_sign)
-            
-        return symbList
+        
+        return symbOut
     # end of sortSYMB(symbList):
     
     def parsingSux(self, symbList, parsingArg):
+        if len(symbList) < 2:
+            return symbList
+
         import svmutil
 
         scaling_cof = parsingArg['scaling']
@@ -1272,6 +1169,29 @@ class InkML(object):
         sigma = parsingArg['sigma']
         m = parsingArg['m']
         
+        features = []
+        GT = False
+        for i, symb in enumerate(symbList[:-1]):
+            n = symbList[i+1]
+            pair = [symb['id'], n['id']]
+            f = self.extractCharPairSCF(pair, GT)
+            features.append(f)
+        X, Y = formParsingFeature(features)
+        
+        fList = np.array(SVM2list(X))
+        pcList = project(Wt, mu, sigma, fList)
+        pcList = pcList[:, :nSegPCA]
+        X = list2SVM(pcList)
+        
+        scaleData(X, scaling_cof)
+        
+        aY, _, _ = svmutil.svm_predict(Y, X, m, '-b 1')
+        for s in symbList:
+            print s['lab'],
+        print
+        print aY
+        print 
+        print
         
         return symbList
     # end of parsingSux(self, symbList, parsingArg):
@@ -1293,8 +1213,7 @@ class InkML(object):
         return sortedSymbIdList
     # end of sortSymbId(self):
     
-    def formCharPair(self):
-        print "Forming character pairs from file: {} ...".format(self.filename),
+    def preFormCharPair(self):
         # preprocessing
         # 1. Duplicate point filtering
         for stroke in self.stroke.itervalues():
@@ -1307,6 +1226,11 @@ class InkML(object):
         # 3. Size normalization
         normalizeExp(self.stroke)
 
+    def formCharPair(self):
+        print "Forming character pairs from file: {} ...".format(self.filename),
+
+        self.preFormCharPair()
+        
         SegSRT = {}
         getSegSRT(self.XML_GT, SegSRT)
                 
@@ -1900,31 +1824,6 @@ def boundingBox(line):
     return (x_min, y_min, x_max, y_max, x_cen, y_cen)
 # end of boundingBox(line):
 
-def scaleData(x, cof=None):
-    if cof == None:
-        cof = {}
-        xmax = {}
-        xmin ={}
-        for (k, v) in x[0].iteritems():
-            xmax[k] = v 
-            xmin[k] = v
-        for l in x[1:]:
-            for (k,v) in l.iteritems():
-                if v > xmax[k]:
-                    xmax[k] = v
-                if v < xmin[k]:
-                    xmin[k] = v
-                    
-        for k in x[0].iterkeys():
-            c = [xmin[k], xmax[k]-xmin[k]]
-            cof[k] = c
-    
-    for l in x:
-        for k in l.iterkeys():
-            l[k] = 2 * (l[k] - cof[k][0]) / cof[k][1] - 1
-    return cof
-# end of genDataSet
-
 def hop(box1, box2):
     x1_min = box1[0]
     x1_max = box1[2]
@@ -2029,6 +1928,23 @@ def plotXML_GT(current, level):
     for i in range(len(current)):
         
         print '{}: {}'.format(i,current[i])
+
+
+def formParsingFeature(features):
+    xList = []
+    yList = []
+    for f in features:
+        y = 0
+        x = {}
+        fIdx = 1
+            
+        for a in f:
+            x[fIdx] = float(a)
+            fIdx += 1
+        xList.append(x)
+        yList.append(y)
+    return (xList, yList)
+# end of formSegFeature
 
 if __name__ == '__main__':
     im1 = InkML('../TrainINKML_v3/expressmatch/81_daniel.inkml')
