@@ -1193,7 +1193,70 @@ class InkML(object):
         print 
         print
         
-        return symbList
+        symbOut = [symbList[0]]
+        suxCount = 0
+         
+        for i, symb in enumerate(symbList[1:]):
+            y = int(aY[i])
+            if nameCharPair[y] == 'beginSUP':  
+                box = symbList[i+1]['box'][:]
+                box[0]=box[2]
+                box[4]=box[2]
+                height = symbList[i+1]['height']
+                openb = {'id':'NULL', 'lab':'{','box':box,'width':0., 'height':height}
+                supsign = {'id':'NULL', 'lab':'^', 'box':box, 'width':0, 'height':height}
+                symbOut += [supsign, openb]
+                suxCount += 1
+                
+            elif nameCharPair[y] == 'beginSUB':
+                box = symbList[i+1]['box'][:]
+                box[0]=box[2]
+                box[4]=box[2]
+                height = symbList[i+1]['height']
+                openb = {'id':'NULL', 'lab':'{','box':box,'width':0., 'height':height}
+                subsign = {'id':'NULL', 'lab':'_', 'box':box, 'width':0, 'height':height}
+                symbOut += [subsign, openb]
+                suxCount += 1
+                
+            elif nameCharPair[y] == 'endSUP' or nameCharPair[y] == 'endSUB':
+                box = symbList[i]['box'][:]
+                box[0]=box[2]
+                box[4]=box[2]
+                height = symbList[i]['height']
+                closeb = {'id':'NULL', 'lab':'}','box':box,'width':0., 'height':height}
+                symbOut += [closeb]
+                suxCount -= 1
+                
+            elif nameCharPair[y] == 'SUP2SUB':
+                box = symbList[i+1]['box'][:]
+                box[0]=box[2]
+                box[4]=box[2]
+                height = symbList[i+1]['height']
+                openb = {'id':'NULL', 'lab':'{','box':box,'width':0., 'height':height}
+                closeb = {'id':'NULL', 'lab':'}','box':box,'width':0., 'height':height}
+                subsign = {'id':'NULL', 'lab':'_', 'box':box, 'width':0, 'height':height}
+                symbOut += [closeb, subsign, openb]
+                
+            elif nameCharPair[y] == 'SUB2SUP':
+                box = symbList[i+1]['box'][:]
+                box[0]=box[2]
+                box[4]=box[2]
+                height = symbList[i+1]['height']
+                openb = {'id':'NULL', 'lab':'{','box':box,'width':0., 'height':height}
+                closeb = {'id':'NULL', 'lab':'}','box':box,'width':0., 'height':height}
+                supsign = {'id':'NULL', 'lab':'^', 'box':box, 'width':0, 'height':height}
+                symbOut += [closeb, supsign, openb]
+               
+            symbOut += [symbList[i+1]]
+            
+        for i in range(suxCount):
+            box = symbList[-1]['box'][:]
+            box[0]=box[2]
+            box[4]=box[2]
+            height = symbList[-1]['height']
+            closeb = {'id':'NULL', 'lab':'}','box':box,'width':0., 'height':height}
+            symbOut += [closeb]
+        return symbOut
     # end of parsingSux(self, symbList, parsingArg):
 
     
