@@ -1385,7 +1385,7 @@ def parsingtrain(args):
         scale_cof = scaleData(rX_scale)
          
         start = time.clock()
-        m = svmutil.svm_train(rY, rX_scale, '-c 32 -g 0.5 -b 1')
+        m = svmutil.svm_train(rY, rX_scale, '-c 32 -g 0.03125 -b 1')
         elapsed = (time.clock() - start)
          
         f = open("parsing_traning.log", 'a')
