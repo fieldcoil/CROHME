@@ -1961,7 +1961,7 @@ def findEndOfSux(current, name, mainSymbId, parent=None):
                     
                     pair['symbols'] = [symb1, symb2]
                     pair['features'] = []
-                    pair['truth'] = tagCharPair['SUP2SUB']
+                    pair['truth'] = tagCharPair['SUB2SUP']
                 break
             elif (exp['name'] == 'msubsup' ) and ('msup' == name) and (exp['mainSymbId'] == mainSymbId):
                 pair = {}
@@ -1978,7 +1978,7 @@ def findEndOfSux(current, name, mainSymbId, parent=None):
                     
                     pair['symbols'] = [symb1, symb2]
                     pair['features'] = []
-                    pair['truth'] = tagCharPair['SUB2SUP']
+                    pair['truth'] = tagCharPair['SUP2SUB']
                 break
             else:
                 pair = findEndOfSux(exp['sub'], name, mainSymbId, current)
@@ -2017,8 +2017,9 @@ if __name__ == '__main__':
     im1.formCharPair()
     
     for p in im1.charPair:
-        print p
-    im1.plot()
+        print p['symbols'],
+        print p['truth']
+    #im1.plot()
     print im1.symbolTruth
 
 

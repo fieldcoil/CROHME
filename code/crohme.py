@@ -1026,6 +1026,11 @@ def gf(im):
     return im
 # end of gf
 
+def fcp(im):
+    im.formCharPair()
+    return im
+# end of fcp
+
 def segtrain(args):
     TrainDataPath = args.input
     assert os.path.isdir(TrainDataPath), "The input directory is not exist!"
@@ -1326,13 +1331,14 @@ def parsingtrain(args):
     print "Done!"
     
     start = time.time()
-#     p = multiprocessing.Pool(processes=nProcesses)        
-#     AllTrainData = p.map(fp, AllTrainData)
-#     p.close()
-#     p.join()
+    
+    p = multiprocessing.Pool(processes=nProcesses)        
+    AllTrainData = p.map(fcp, AllTrainData)
+    p.close()
+    p.join()
 
-    for IM in AllTrainData:
-        IM.formCharPair() 
+#     for IM in AllTrainData:
+#         IM.formCharPair() 
     
     print "run time = {}".format(time.time() - start)
     for subset in trainset:
