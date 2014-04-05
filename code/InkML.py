@@ -1195,7 +1195,7 @@ class InkML(object):
         Wt = parsingArg['Wt']
         mu = parsingArg['mu']
         sigma = parsingArg['sigma']
-        m = parsingArg['m']
+        m = svmutil.svm_load_model(parsingArg['mFile'])
         
         features = []
         GT = False

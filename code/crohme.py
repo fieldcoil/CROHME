@@ -1498,13 +1498,13 @@ def parsing(args):
     
     classify_m = svmutil.svm_load_model(modelfile)
     segment_m = svmutil.svm_load_model(segmodelfile)
-    parsing_m = svmutil.svm_load_model(parsingmodelfile)
+#     parsing_m = svmutil.svm_load_model(parsingmodelfile)
     
     parsingArg = {'scaling':   parsingscaling_cof,
                    'Wt':        parsingWt,
                    'mu':        parsingmu,
                    'sigma':     parsingsigma,
-                   'm':         parsing_m}
+                   'mFile':     parsingmodelfile}
     
     if os.path.isdir(inputPath):
         AllTrainData = readAllTrainData(inputPath)
