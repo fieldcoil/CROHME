@@ -1401,6 +1401,29 @@ def parsingtrain(args):
                
 # end of parsingtrain
 
+def ps(im, parsingArg, cykpaser):
+    print "The Latex expression of {} is:".format(im.filename),
+    im.generateSymbList(parsingArg)
+    sec,mat,tree = cykpaser.parse(im.symbList)
+    im.parsingSecc = sec
+    for s in im.symbList:
+        print s['lab'],
+    print
+
+    if sec:
+        print "There is(are) {} possible tree(s)".format(len(tree))
+        im.tree = tree[0]
+#         CYK.printTree(tree[0])
+        im.seccCYK = True
+    else:
+        print "parsing is failure!" 
+    return im
+# end of ps(im, )
+
+def ps_star(i):
+    return ps(*i)
+# end of def ps_star(i):
+
 def parsing(args):
     inputPath = args.input
     
@@ -1583,29 +1606,40 @@ def parsing(args):
     cykpaser = CYK.CYK('OurGrammar.xml')
     cykpaser.toCNF()
     
+    
+    start = time.clock()
+    
+    if len(testData) > nProcesses:
 
-    nSecc = 0
-    nFail = 0
-    for im in testData:
-        print "The Latex expression of {} is:".format(im.filename)
-        im.generateSymbList(parsingArg)
-        sec,mat,tree = cykpaser.parse(im.symbList)
-        im.parsingSecc = sec
-        for s in im.symbList:
-            print s['lab'],
-        print
-
-        if sec:
-            print "There is(are) {} possible tree(s)".format(len(tree))
-            im.tree = tree[0]
-#             CYK.printTree(tree[0])
-            nSecc += 1
-        else:
-            print "parsing is failure!"
-            nFail += 1
-        print            
+        p = multiprocessing.Pool(processes=nProcesses)
+        mapArg = itertools.izip(testData, itertools.repeat(parsingArg), itertools.repeat(cykpaser))
+        testData = p.map(ps_star, mapArg)
+        p.close()
+        p.join()
+    else:
+        for im in testData:
+            ps(im, parsingArg, cykpaser)
+    
+#     for im in testData:
+#         print "The Latex expression of {} is:".format(im.filename)
+#         im.generateSymbList(parsingArg)
+#         sec,mat,tree = cykpaser.parse(im.symbList)
+#         im.parsingSecc = sec
+#         for s in im.symbList:
+#             print s['lab'],
+#         print
+# 
+#         if sec:
+#             print "There is(are) {} possible tree(s)".format(len(tree))
+#             im.tree = tree[0]
+# #             CYK.printTree(tree[0])
+#             im.seccCYK = True
+#         else:
+#             print "parsing is failure!"    
+                  
     elapsed = (time.clock() - start)
-    print "Parsing success rate = {:.4f} ({}/{})".format( 1.*nSecc/(nSecc+nFail), nSecc, nSecc+nFail)
+    
+    
     print "Parsing time: {}".format(elapsed)
     if os.path.isdir(inputPath):
         for im in testData:

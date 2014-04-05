@@ -845,7 +845,7 @@ class InkML(object):
 
     # end of extractC(self, pairIds):
     
-    def generateSymbList_d(self, parsingArg):
+    def generateSymbList(self, parsingArg):
         #self.generateSymbList2()
         try:
             self.generateSymbList2(parsingArg)
@@ -853,7 +853,7 @@ class InkML(object):
                 self.generateSymbList1()
         except:
             
-            print "**** An error was occurred during generating 2D Latex string! 1D Latex string is generated."
+            print "**** An error was occurred during generating 2D Latex string! 1D Latex string is generated. Filename: {}".format(self.filename)
             self.generateSymbList1()
     # end of generateSymbList(self):
     
@@ -864,7 +864,7 @@ class InkML(object):
             self.symbList.append(symb)
     # end of generateSymbList(self)
     
-    def generateSymbList(self, parsingArg):
+    def generateSymbList2(self, parsingArg):
         self.preFormCharPair()
         symbList = []
         for key in self.symbol.iterkeys():
@@ -893,7 +893,7 @@ class InkML(object):
                     num = symbList[nIdx]
                     if bIdx!= nIdx:
                         HO = hop(bar['box'], num['box'])
-                        if HO > 0.5*num['width']:
+                        if HO > 0.2*num['width']:
                             nHO += 1
                             if num['box'][5] < bar['box'][5]:
                                 nIdxs.append(nIdx)
@@ -915,52 +915,80 @@ class InkML(object):
                     nIdxs2 = fnIdxs[j]
                     dIdxs2 = fdIdxs[j]
                     bIdx2 = fbIdxs[j]
-                    removeDuplicatedIdx(nIdxs1, bIdx1, nIdxs2, bIdx2)
-                    removeDuplicatedIdx(nIdxs1, bIdx1, dIdxs2, bIdx2)
-                    removeDuplicatedIdx(dIdxs1, bIdx1, nIdxs2, bIdx2)
-                    removeDuplicatedIdx(dIdxs1, bIdx1, dIdxs2, bIdx2)
-            
+
+                    removeDuplicatedIdx(nIdxs1, bIdx1, dIdxs1, nIdxs2, bIdx2, dIdxs2)
+                    removeDuplicatedIdx(nIdxs1, bIdx1, dIdxs1, dIdxs2, bIdx2, nIdxs2)
+                    removeDuplicatedIdx(dIdxs1, bIdx1, nIdxs1, nIdxs2, bIdx2, dIdxs2)
+                    removeDuplicatedIdx(dIdxs1, bIdx1, nIdxs1, dIdxs2, bIdx2, nIdxs2)
+                      
             removedIdx = []
             nums = []
             dens = []
+            numFbIdxs = []
+            denFbIdxs = []
             bars = []
             for (i, fbIdx) in enumerate(fbIdxs):
                 num = []
                 den = []
+                numFbIdx = []
+                denFbIdx = []
                 symbList[fbIdx]['signed'] = True
                 bars.append(symbList[fbIdx])
+                j = 0
                 for fnIdx in fnIdxs[i]:
                     removedIdx.append(fnIdx)
                     num.append(symbList[fnIdx])
+                    if fnIdx in fbIdxs:
+                        numFbIdx.append(j)
+                    j += 1
+                j = 0
                 for fdIdx in fdIdxs[i]:
                     removedIdx.append(fdIdx)
                     den.append(symbList[fdIdx])
+                    if fdIdx in fbIdxs:
+                        denFbIdx.append(j)
+                    j += 1
                 nums.append(num)
                 dens.append(den)
+                numFbIdxs.append(numFbIdx)
+                denFbIdxs.append(denFbIdx)
             base = symbList[:]
-            for rIdx in sorted(set(removedIdx), reverse=True):
-                del base[rIdx]
             
-            if len(base) > 0:
-                base = self.sortSYMB(base, parsingArg)
+            baseFbIdxs = fbIdxs[:]
+            for rIdx in sorted(set(removedIdx), reverse=True):
+                for i in range(len(baseFbIdxs)-1, -1, -1):
+                    if baseFbIdxs[i] == rIdx:
+                        del baseFbIdxs[i]
+                    elif baseFbIdxs[i] > rIdx:
+                        baseFbIdxs[i] -= 1
+                del base[rIdx]
+                            
+            base = self.processSYMBList(base, baseFbIdxs, parsingArg)
             
             for i in range(len(fbIdxs)-1, -1, -1):
                 if len(nums[i]) > 0:
-                    num = self.sortSYMB(nums[i], parsingArg)
+                    nums[i] = self.processSYMBList(nums[i], numFbIdxs[i], parsingArg)
                 if len(dens[i]) > 0:
-                    den = self.sortSYMB(dens[i], parsingArg)
-                
+                    dens[i] = self.processSYMBList(dens[i], denFbIdxs[i], parsingArg)
+
+            found = True
+            while found: 
                 found = False
                 for j in range(len(base)-1, -1, -1):
-                    if ((base[j]['lab'] == '-') and (base[j]['box'][4] == bars[i]['box'][4])):
-                        insPos = j
-                        found = True
+                    for i in range(len(fbIdxs)-1, -1, -1):
+                        num = nums[i]
+                        den = dens[i]
+                        if ((base[j]['lab'] == '-') and (base[j]['box'][4] == bars[i]['box'][4])):
+                            insPos = j
+                            found = True
+                            break
+                    if found:
                         break
+                    
                 if found:
                     assert base[insPos]['lab'] == '-', "Unknow error!"
                     base[insPos]['lab'] = '\\frac'
                     insPos += 1
-                    
                     box = den[-1]['box'][:]
                     box[0]=box[2]
                     box[4]=box[2]
@@ -1186,12 +1214,71 @@ class InkML(object):
         scaleData(X, scaling_cof)
         
         aY, _, _ = svmutil.svm_predict(Y, X, m, '-b 1')
-        for s in symbList:
-            print s['lab'],
-        print
-        print aY
-        print 
-        print
+        
+        suxList = []
+        for i, y in enumerate(aY):
+            y = int(y)
+            if y == tagCharPair['beginSUP']:
+                if (len(suxList) > 0) and (suxList[-1]['tag'] == 'SUB'):
+                    aY[i] = tagCharPair['endSUB']
+                    del suxList[-1]
+                else:
+                    su = {'tag':'SUP', 'pos':i}
+                    suxList.append(su)
+            
+            elif y == tagCharPair['beginSUB']:
+                if (len(suxList) > 0) and (suxList[-1]['tag'] == 'SUP'):
+                    aY[i] = tagCharPair['endSUP']
+                    del suxList[-1]
+                else:
+                    su = {'tag':'SUB', 'pos':i}
+                    suxList.append(su)
+            
+            elif y == tagCharPair['endSUP']:
+                if (len(suxList) > 0) and (suxList[-1]['tag'] == 'SUP'):
+                    del suxList[-1]
+                else:
+                    aY[i] = tagCharPair['begeinSUB']
+                    su = {'tag':'SUB', 'pos':i}
+                    suxList.append(su)
+            
+            elif y == tagCharPair['endSUB']:
+                if (len(suxList) > 0) and (suxList[-1]['tag'] == 'SUB'):
+                    del suxList[-1]
+                else:
+                    aY[i] = tagCharPair['begeinSUP']
+                    su = {'tag':'SUP', 'pos':i}
+                    suxList.append(su)
+            
+            elif y == tagCharPair['SUP2SUB']:
+                if (len(suxList) > 0) and (suxList[-1]['tag'] == 'SUP'):
+                    del suxList[-1]
+                    su = {'tag':'SUB', 'pos':i}
+                    suxList.append(su)
+                else:
+                    # I have no idea to deal this situation
+                    pass
+            
+            elif y == tagCharPair['SUB2SUP']:
+                if (len(suxList) > 0) and (suxList[-1]['tag'] == 'SUB'):
+                    del suxList[-1]
+                    su = {'tag':'SUP', 'pos':i}
+                    suxList.append(su)
+                else:
+                    # I have no idea to deal this situation
+                    pass
+        if len(suxList) > 0:
+            for i in range(len(suxList)-1, -1, -1):
+                startIdx = suxList[i]['pos']
+                sux = suxList[i]['tag']
+                for j in range(startIdx,len(aY)):
+                    if aY[j] == tagCharPair['R']:
+                        if sux == 'SUP':
+                            aY[j] = tagCharPair['endSUP']
+                        elif sux == 'SUB':
+                            aY[j] = tagCharPair['endSUB']
+                        break
+            
         
         symbOut = [symbList[0]]
         suxCount = 0
@@ -1258,6 +1345,40 @@ class InkML(object):
             symbOut += [closeb]
         return symbOut
     # end of parsingSux(self, symbList, parsingArg):
+
+    def processSYMBList(self, base, idxs, parsingArg):
+        
+#         print 
+#         print 'input symbol list:',
+#         for s in base:
+#             print s['lab'],
+#         print
+        
+        baseOut = []
+        if len(base) > 0:
+            if len(idxs)>0:
+                currentIdx = 0
+                for idx in idxs:
+                    subList = base[currentIdx:idx]
+                    if len(subList) > 1:
+                        subList = self.sortSYMB(subList, parsingArg)
+                    baseOut += subList
+                    baseOut.append(base[idx])
+                    currentIdx = idx+1
+                subList = base[currentIdx:]
+                if len(subList) > 1:
+                    subList = self.sortSYMB(subList, parsingArg)
+                baseOut += subList
+            else:
+                baseOut = self.sortSYMB(base, parsingArg)
+        
+#         print 'input symbol list:',
+#         for s in baseOut:
+#             print s['lab'],
+#         print
+
+        return baseOut
+    # end of def processSYMBList(list, idx):
 
     
     def sortSymbId(self):
@@ -1906,14 +2027,16 @@ def vop(box1, box2):
 # end of vop(box1, box2)
 
 
-def removeDuplicatedIdx(nIdxs1, bIdx1, nIdxs2, bIdx2):
+def removeDuplicatedIdx(nIdxs1, bIdx1, dIdxs1, nIdxs2, bIdx2, dIdxs2):
     for i in range(len(nIdxs1)-1, -1, -1):
         for j in range(len(nIdxs2)-1, -1, -1):
             if nIdxs1[i] == nIdxs2[j]:
-                if bIdx1 in nIdxs2:
+                if (bIdx1 in nIdxs2) or (bIdx2 in dIdxs1):
                     del nIdxs2[j]
-                elif bIdx2 in nIdxs1:
+                    break
+                elif (bIdx2 in nIdxs1) or (bIdx1 in dIdxs2):
                     del nIdxs1[i]
+                    break
                 else:
                     # This situation shouldn't happen
                     pass
@@ -2009,8 +2132,9 @@ def formParsingFeature(features):
     return (xList, yList)
 # end of formSegFeature
 
+
 if __name__ == '__main__':
-    im1 = InkML('../TrainINKML_v3/expressmatch/81_daniel.inkml')
+    im1 = InkML('../TrainINKML_v3/expressmatch/81_Nina.inkml')
     # im1 = InkML('../TrainINKML_v3/MathBrush/2009210-947-105.inkml')
     # im1 = InkML('../TrainINKML_v3/KAIST/traindata2_25_sub_88.inkml')
 
@@ -2019,7 +2143,7 @@ if __name__ == '__main__':
     for p in im1.charPair:
         print p['symbols'],
         print p['truth']
-    #im1.plot()
+    im1.plot()
     print im1.symbolTruth
 
 
