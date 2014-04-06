@@ -34,7 +34,6 @@ import svmutil
 import time
 import multiprocessing
 from matplotlib.mlab import PCA
-import CYK
 import itertools
 from routines import SVM2list, list2SVM, project, scaleData
 
@@ -1401,7 +1400,7 @@ def parsingtrain(args):
                
 # end of parsingtrain
 
-def ps(im, parsingArg, cykpaser):
+def ps(im, parsingArg):
     im.generateSymbList(parsingArg)
     
 #     filename = os.path.basename(im.filename)
@@ -1599,8 +1598,6 @@ def parsing(args):
 #     print 
 
     applyResults(testData, aY, eIdx, symbDict)
-    cykpaser = CYK.CYK('OurGrammar.xml')
-    cykpaser.toCNF()
     
     
     start = time.clock()
@@ -1608,13 +1605,13 @@ def parsing(args):
     if len(testData) > nProcesses:
 
         p = multiprocessing.Pool(processes=nProcesses)
-        mapArg = itertools.izip(testData, itertools.repeat(parsingArg), itertools.repeat(cykpaser))
+        mapArg = itertools.izip(testData, itertools.repeat(parsingArg))
         testData = p.map(ps_star, mapArg)
         p.close()
         p.join()
     else:
         for i in len(testData):
-            testData[i] = ps(testData[i], parsingArg, cykpaser)
+            testData[i] = ps(testData[i], parsingArg)
     
 #     for im in testData:
 #         print "The Latex expression of {} is:".format(im.filename)
