@@ -1612,8 +1612,9 @@ def parsing(args):
         p.close()
         p.join()
     else:
-        for im in testData:
-            ps(im, parsingArg, cykpaser)
+        for i in len(testData):
+            
+            testData[i] = ps(testData[i], parsingArg, cykpaser)
     
 #     for im in testData:
 #         print "The Latex expression of {} is:".format(im.filename)
