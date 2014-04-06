@@ -1402,22 +1402,17 @@ def parsingtrain(args):
 # end of parsingtrain
 
 def ps(im, parsingArg, cykpaser):
-    print "The Latex expression of {} is:".format(im.filename),
     im.generateSymbList(parsingArg)
-    sec,mat,tree = cykpaser.parse(im.symbList)
-    im.parsingSecc = sec
-    for s in im.symbList:
-        print s['lab'],
-    print
-
-    if sec:
-        print "There is(are) {} possible tree(s)".format(len(tree))
-        im.tree = tree[0]
-#         CYK.printTree(tree[0])
-        im.seccCYK = True
-    else:
-        print "parsing is failure!" 
-    return im
+    
+#     filename = os.path.basename(im.filename)
+#     filename = "{}.pickle".format(filename)
+#     h = open(filename, 'w')
+#     pickle.dump(im.symbList, h)
+#     pickle.dump(im.symbol, h)
+#     pickle.dump(im.stroke, h)
+#     h.close()
+    
+    im.symbList2XML()
 # end of ps(im, )
 
 def ps_star(i):
@@ -1650,9 +1645,13 @@ def parsing(args):
              
             if not os.path.exists(os.path.dirname(outpath)):
                 os.makedirs(os.path.dirname(outpath))
-            writeLG(outpath, im)
+            h = open(outpath, 'w')
+            im.printLG(h)
+            h.close()
     elif os.path.isfile(inputPath):
-        writeLG(output, testData[0])
+        h = open(output, 'w')
+        testData[0].printLG(h)
+        h.close()
      
 # end of parsing
 

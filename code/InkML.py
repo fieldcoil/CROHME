@@ -222,7 +222,8 @@ class InkML(object):
             
         namespace = "{http://www.w3.org/2003/InkML}"
         # it looks that register_namespace doesn't work
-        #ET.register_namespace('ns', 'http://www.w3.org/2003/InkML')
+        ET.register_namespace('ns', 'http://www.w3.org/2003/InkML')
+        ET.register_namespace('xml', 'http://www.w3.org/XML/1998/namespace')
         try:
             tree = ET.parse(filename)
         except ET.ParseError:
@@ -239,7 +240,6 @@ class InkML(object):
                 self.UI = ann.text
                  
         annXML = root.find('{0}annotationXML'.format(namespace))
-        print annXML.tag
         Load_xml_truth(self.XML_GT, annXML[0])
         norm_mathMLNorm(self.XML_GT);
         
@@ -286,9 +286,11 @@ class InkML(object):
         if printTruth:
             SYMB = self.symbolTruth
             STRK = self.strokeTruth
+            XML = self.XML_GT
         else:
             SYMB = self.symbol
             STRK = self.stroke
+            XML = self.XML
             
         output.write("# IUD, {}\n".format(self.UI))
         output.write("# Nodes:\n")
@@ -305,7 +307,7 @@ class InkML(object):
         outlist = []
         
         SegSRT = {}
-        getSegSRT(self.XML_GT, SegSRT)
+        getSegSRT(XML, SegSRT)
         usedSymb = {}
         for segId in sorted(SegSRT.keys()):
             regex = re.compile(r'\[(.*)\],\[(.*)\]')
@@ -1673,36 +1675,193 @@ class InkML(object):
         if len(self.symbList) > 1:
             subList2xml(mathml, self.symbList)
         elif len(self.symbList) == 1:
-            m = ET.SubElement(mathml, symbTag[self.symbList[0]['lab']])
+            addXMLNode(mathml, self.symbList[0])
         
-        ET.dump(annXML)
-        self.XML = None
+        XMLindent(annXML)
+        Load_xml_truth(self.XML, annXML[0])
+        norm_mathMLNorm(self.XML)
+        
+#         ET.dump(annXML)
     # end of symbList2XML(self, symbList):
 # end of class InkML(object):
 
 def subList2xml(parent, symbList):
-    mrow = ET.SubElement(parent,'mrow');
-    first = symbList[0]
-    if first['lab'] == '_':
-        # sub
-        pass
-    elif first['lab'] == '^':
-        # sup
-        pass
-    elif first['lab'] == '\frac':
+    assert len(symbList) > 1, 'The length of symbList must be at least 2'
+    
+    symb1 = symbList[0]
+    symb2 = symbList[1]
+    
+    if symb1['lab'] == '\\frac':
         # fraction
-        pass
-    elif first['lab'] == '\sqrt':
-        # square root
-        pass
-    else:
-        m1 = ET.SubElement(mrow, symbTag[symbList[0]['lab']])
-        subList = symbList[1:]
-        if len(subList) > 1:
-            subList2xml(mrow, subList)
+        bracesPos = findBraces(symbList, [['{','}'],['{','}']])
+        start1 = bracesPos[0][0]
+        end1 = bracesPos[0][1]
+        start2 = bracesPos[1][0]
+        end2 = bracesPos[1][1]
+        
+        subList1 = symbList[start1+1 : end1]
+        subList2 = symbList[start2+1 : end2]
+        curr = ET.SubElement(parent, 'mfrac', {'xml:id':symb1['id']})
+        if len(subList1) > 1:
+            subList2xml(curr, subList1)
         else:
-            m2 = ET.SubElement(mrow, symbTag[subList[0]['lab']])
+            addXMLNode(curr, subList1[0])
+            
+        if len(subList2) > 1:
+            subList2xml(curr, subList2)
+        else:
+            addXMLNode(curr, subList2[0])
+
+    elif symb1['lab'] == '\\sqrt':
+        # square root
+        bracesPos = findBraces(symbList, [['{','}']])
+        start = bracesPos[0][0]
+        end = bracesPos[0][1]
+        subList = symbList[start+1 : end]
+        curr = ET.SubElement(parent, 'msqrt', {'xml:id': symb1['id']})
+        if len(subList) > 1:
+            subList2xml(curr, subList)
+        else:
+            addXMLNode(curr, subList[0])
+            
+
+    elif symb2['lab'] == '_':
+        # sub
+        bracesPos = findBraces(symbList, [['{','}']])
+        start = bracesPos[0][0]
+        end = bracesPos[0][1]
+        subList = symbList[start+1 : end]
+        leftList = symbList[end+1:]
+        curr = ET.SubElement(parent, 'mrow')
+        if (len(leftList) > 0) and (leftList[0]['lab'] == '^'):
+            # msubsup
+            bracesPos = findBraces(leftList, [['{','}']])
+            start = bracesPos[0][0]
+            end = bracesPos[0][1]
+            subList2 = leftList[start+1 : end]
+            leftList = leftList[end+1:]
+            child1 = ET.SubElement(curr,'msubsup')
+            addXMLNode(child1, symb1)
+           
+            if len(subList) > 1:
+                subList2xml(child1, subList)
+            else:
+                addXMLNode(child1, subList[0])
+ 
+            if len(subList2) > 1:
+                subList2xml(child1, subList2)
+            else:
+                addXMLNode(child1, subList2[0])
+                 
+            if len(leftList) > 1:
+                subList2xml(curr, leftList)
+            elif len(leftList) == 1:
+                addXMLNode(curr, leftList[0])
+
+        else:
+            child1 = ET.SubElement(curr, 'msub')
+            addXMLNode(child1, symb1)
+            
+            if len(subList) > 1:
+                subList2xml(child1, subList)
+            else:
+                addXMLNode(child1, subList[0])
+                
+            if len(leftList) > 1:
+                subList2xml(curr, leftList)
+            elif len(leftList) == 1:
+                addXMLNode(curr, leftList[0])
+
+    elif symb2['lab'] == '^':
+        # sup
+        bracesPos = findBraces(symbList, [['{','}']])
+        start = bracesPos[0][0]
+        end = bracesPos[0][1]
+        subList = symbList[start+1 : end]
+        leftList = symbList[end+1:]
+        curr = ET.SubElement(parent, 'mrow')
+        if (len(leftList) > 0) and (leftList[0]['lab'] == '_'):
+            # msubsup
+            bracesPos = findBraces(leftList, [['{','}']])
+            start = bracesPos[0][0]
+            end = bracesPos[0][1]
+            subList2 = leftList[start+1 : end]
+            leftList = leftList[end+1:]
+            child1 = ET.SubElement(curr,'msubsup')
+            addXMLNode(child1, symb1)
+            if len(subList2) > 1:
+                subList2xml(child1, subList2)
+            else:
+                addXMLNode(child1, subList2[0])
+            
+            if len(subList) > 1:
+                subList2xml(child1, subList)
+            else:
+                addXMLNode(child1, subList[0])
+                
+            if len(leftList) > 1:
+                subList2xml(curr, leftList)
+            elif len(leftList) == 1:
+                addXMLNode(curr, leftList[0])
+
+        else:
+            child1 = ET.SubElement(curr, 'msup')
+            addXMLNode(child1, symb1)
+            
+            if len(subList) > 1:
+                subList2xml(child1, subList)
+            else:
+                addXMLNode(child1, subList[0])
+                
+            if len(leftList) > 1:
+                subList2xml(curr, leftList)
+            elif len(leftList) == 1:
+                addXMLNode(curr, leftList[0])
+
+    else:
+        subList = symbList[1:]
+        curr = ET.SubElement(parent,'mrow');
+        m1 = ET.SubElement(curr, symbTag[symbList[0]['lab']], {'xml:id':symbList[0]['id']})
+        m1.text = symbList[0]['lab']
+        if len(subList) > 1:
+            subList2xml(curr, subList)
+        else:
+            addXMLNode(curr, subList[0])
 # end of list2xml
+
+def addXMLNode(parent, symb):
+    m = ET.SubElement(parent, symbTag[symb['lab']], {'xml:id':symb['id']})
+    m.text = symb['lab']
+    return m
+# end of addXMLNode(parent, symb):
+def findBraces(symbList, braces):
+    currentIdx = 0;
+    inBrace = 0;
+    pos = [0] * len(braces)
+    start = 0
+    end = 0
+    for i,symb in enumerate(symbList):
+        if (symb['lab'] == braces[currentIdx][0]) and (inBrace == 0):
+            # the left brace
+            start = i
+            inBrace += 1
+        elif (symb['lab'] == braces[currentIdx][0]) and (inBrace > 0):
+            # begin sub
+            inBrace += 1
+        elif (symb['lab'] == braces[currentIdx][1]) and (inBrace == 1):
+            # the right brace
+            end = i
+            inBrace -= 1
+            pos[currentIdx] = [start, end]
+            currentIdx += 1
+            if currentIdx == len(braces):
+                break
+        elif (symb['lab'] == braces[currentIdx][1]) and (inBrace > 1):
+            # end sub
+            inBrace -= 1
+            
+    return pos
+# end of findBraces(symbList, braces):
 
 def Load_xml_truth(truth, data):
     '''
@@ -1720,8 +1879,9 @@ def Load_xml_truth(truth, data):
     truth.append(current)
     
     regex = re.compile('^\{.+?\}id$')
+    regex2 = re.compile('^xml:id$')
     for k in data.attrib.keys():
-        if regex.search(k):
+        if regex.search(k) or regex2.search(k):
             current['id'] = data.attrib[k]
             break
     
@@ -1858,7 +2018,7 @@ def norm_mathMLNorm(current):
                         #print($exp->{name}." problem detected : no child !\n");
                         pass
                         
-                elif 1 < subExpNames[exp['name']]:
+                elif subExpNames.has_key(exp['name']) and 1 < subExpNames[exp['name']]:
                     # for special relations with multi sub exp, we should have the exact number of children
                     if exp['sub'] > subExpNames[exp['name']]:
                         pass
@@ -2277,7 +2437,24 @@ def formParsingFeature(features):
     return (xList, yList)
 # end of formSegFeature
 
+def XMLindent(elem, level=0):
+    ind = ' '*4
+    i = "\n" + ind * level
+    if len(elem):
+        if not elem.text or not elem.text.strip():
+            elem.text = i + ind
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
+        for elem in elem:
+            XMLindent(elem, level+1)
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
+    else:
+        if level and (not elem.tail or not elem.tail.strip()):
+            elem.tail = i
+# end of  XMLindent(elem, level=0):    
 
+    
 if __name__ == '__main__':
     import os
     import pickle
@@ -2289,6 +2466,8 @@ if __name__ == '__main__':
     filename = '{}.pickle'.format(filename)
     h = open(filename, 'r')
     im1.symbList = pickle.load(h)
+    im1.symbol = pickle.load(h)
+    im1.stroke = pickle.load(h)
     h.close()
     for s in im1.symbList:
         print s['lab'],
@@ -2296,6 +2475,9 @@ if __name__ == '__main__':
     
     im1.symbList2XML()
     
+    h = open('test.lg', 'w')
+    im1.printLG(h)
+    h.close
 
     
 
