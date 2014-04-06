@@ -1602,16 +1602,16 @@ def parsing(args):
     
     start = time.clock()
     
-    if len(testData) > nProcesses:
-
-        p = multiprocessing.Pool(processes=nProcesses)
-        mapArg = itertools.izip(testData, itertools.repeat(parsingArg))
-        testData = p.map(ps_star, mapArg)
-        p.close()
-        p.join()
-    else:
-        for i in len(testData):
-            testData[i] = ps(testData[i], parsingArg)
+#     if len(testData) > nProcesses:
+# 
+#         p = multiprocessing.Pool(processes=nProcesses)
+#         mapArg = itertools.izip(testData, itertools.repeat(parsingArg))
+#         testData = p.map(ps_star, mapArg)
+#         p.close()
+#         p.join()
+#     else:
+    for im in testData:
+            ps(im, parsingArg)
     
 #     for im in testData:
 #         print "The Latex expression of {} is:".format(im.filename)
