@@ -1610,7 +1610,7 @@ def parsing(args):
     
     start = time.clock()
     
-    if len(testData) > nProcesses:
+    if False :#len(testData) > nProcesses:
 
         p = multiprocessing.Pool(processes=nProcesses)
         mapArg = itertools.izip(testData, itertools.repeat(parsingArg))
