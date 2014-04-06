@@ -83,6 +83,110 @@ tagCharPair = {}
 for i in range(len(nameCharPair)):
     tagCharPair[nameCharPair[i]] = i
 
+
+symbTag = {'!': 'mi',
+ '(': 'mi',
+ ')': 'mi',
+ '+': 'mo',
+ ',': 'mi',
+ '-': 'mo',
+ '.': 'mi',
+ '/': 'mo',
+ '0': 'mn',
+ '1': 'mn',
+ '2': 'mn',
+ '3': 'mn',
+ '4': 'mn',
+ '5': 'mn',
+ '6': 'mn',
+ '7': 'mn',
+ '8': 'mn',
+ '9': 'mn',
+ '=': 'mo',
+ 'A': 'mi',
+ 'B': 'mi',
+ 'C': 'mi',
+ 'E': 'mi',
+ 'F': 'mi',
+ 'G': 'mi',
+ 'H': 'mi',
+ 'I': 'mi',
+ 'L': 'mi',
+ 'M': 'mi',
+ 'N': 'mi',
+ 'P': 'mi',
+ 'R': 'mi',
+ 'S': 'mi',
+ 'T': 'mi',
+ 'V': 'mi',
+ 'X': 'mi',
+ 'Y': 'mi',
+ '[': 'mi',
+ '\\Delta': 'mi',
+ '\\alpha': 'mi',
+ '\\beta': 'mi',
+ '\\cos': 'mi',
+ '\\div': 'mo',
+ '\\exists': 'mo',
+ '\\forall': 'mo',
+ '\\gamma': 'mi',
+ '\\geq': 'mo',
+ '\\gt': 'mo',
+ '\\in': 'mo',
+ '\\infty': 'mi',
+ '\\int': 'mo',
+ '\\lambda': 'mi',
+ '\\ldots': 'mo',
+ '\\leq': 'mo',
+ '\\lim': 'mi',
+ '\\log': 'mi',
+ '\\lt': 'mo',
+ '\\mu': 'mi',
+ '\\neq': 'mo',
+ '\\phi': 'mi',
+ '\\pi': 'mi',
+ '\\pm': 'mo',
+ '\\prime': 'mi',
+ '\\rightarrow': 'mo',
+ '\\sigma': 'mi',
+ '\\sin': 'mi',
+ '\\sqrt': 'mi',
+ '\\sum': 'mi',
+ '\\tan': 'mi',
+ '\\theta': 'mi',
+ '\\times': 'mo',
+ '\\{': 'mi',
+ '\\}': 'mi',
+ ']': 'mi',
+ 'a': 'mi',
+ 'b': 'mi',
+ 'c': 'mi',
+ 'd': 'mi',
+ 'e': 'mi',
+ 'f': 'mi',
+ 'g': 'mi',
+ 'h': 'mi',
+ 'i': 'mi',
+ 'j': 'mi',
+ 'k': 'mi',
+ 'l': 'mi',
+ 'm': 'mi',
+ 'n': 'mi',
+ 'o': 'mi',
+ 'p': 'mi',
+ 'q': 'mi',
+ 'r': 'mi',
+ 's': 'mi',
+ 't': 'mi',
+ 'u': 'mi',
+ 'v': 'mi',
+ 'w': 'mi',
+ 'x': 'mi',
+ 'y': 'mi',
+ 'z': 'mi',
+ '|': 'mi'}
+
+
 class InkML(object):
     '''
     classdocs
@@ -106,6 +210,7 @@ class InkML(object):
         self.symbolTruth = {}
          
         self.XML_GT = []
+        self.XML = []
         self.hasPair = False
         self.pair = [];
         self.hasCharPair = False
@@ -134,6 +239,7 @@ class InkML(object):
                 self.UI = ann.text
                  
         annXML = root.find('{0}annotationXML'.format(namespace))
+        print annXML.tag
         Load_xml_truth(self.XML_GT, annXML[0])
         norm_mathMLNorm(self.XML_GT);
         
@@ -1557,7 +1663,46 @@ class InkML(object):
             plt.text(strk['trace1'][0,0], -strk['trace1'][0,1],key)
         plt.show()
     # end of plot(self):
+    
+    def symbList2XML(self):
+        assert self.symbList != None, 'Please call generateSymbList before calling me'
+        
+        annXML = ET.Element('annotationXML',{'encoding': "Content-MathML"})
+        mathml = ET.SubElement(annXML, 'math', {'xmlns':'http://www.w3.org/1998/Math/MathML'})
+        
+        if len(self.symbList) > 1:
+            subList2xml(mathml, self.symbList)
+        elif len(self.symbList) == 1:
+            m = ET.SubElement(mathml, symbTag[self.symbList[0]['lab']])
+        
+        ET.dump(annXML)
+        self.XML = None
+    # end of symbList2XML(self, symbList):
 # end of class InkML(object):
+
+def subList2xml(parent, symbList):
+    mrow = ET.SubElement(parent,'mrow');
+    first = symbList[0]
+    if first['lab'] == '_':
+        # sub
+        pass
+    elif first['lab'] == '^':
+        # sup
+        pass
+    elif first['lab'] == '\frac':
+        # fraction
+        pass
+    elif first['lab'] == '\sqrt':
+        # square root
+        pass
+    else:
+        m1 = ET.SubElement(mrow, symbTag[symbList[0]['lab']])
+        subList = symbList[1:]
+        if len(subList) > 1:
+            subList2xml(mrow, subList)
+        else:
+            m2 = ET.SubElement(mrow, symbTag[subList[0]['lab']])
+# end of list2xml
 
 def Load_xml_truth(truth, data):
     '''
@@ -2134,19 +2279,22 @@ def formParsingFeature(features):
 
 
 if __name__ == '__main__':
+    import os
+    import pickle
     im1 = InkML('../TrainINKML_v3/expressmatch/81_Nina.inkml')
     # im1 = InkML('../TrainINKML_v3/MathBrush/2009210-947-105.inkml')
     # im1 = InkML('../TrainINKML_v3/KAIST/traindata2_25_sub_88.inkml')
 
-    im1.formCharPair()
+    filename = os.path.basename(im1.filename)
+    filename = '{}.pickle'.format(filename)
+    h = open(filename, 'r')
+    im1.symbList = pickle.load(h)
+    h.close()
+    for s in im1.symbList:
+        print s['lab'],
+    print
     
-    for p in im1.charPair:
-        print p['symbols'],
-        print p['truth']
-    im1.plot()
-    print im1.symbolTruth
-
-
+    im1.symbList2XML()
     
 
     
