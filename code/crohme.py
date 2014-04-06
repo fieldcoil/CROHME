@@ -1413,6 +1413,7 @@ def ps(im, parsingArg, cykpaser):
 #     h.close()
     
     im.symbList2XML()
+    return im
 # end of ps(im, )
 
 def ps_star(i):
@@ -1613,7 +1614,6 @@ def parsing(args):
         p.join()
     else:
         for i in len(testData):
-            
             testData[i] = ps(testData[i], parsingArg, cykpaser)
     
 #     for im in testData:
