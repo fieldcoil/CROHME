@@ -1020,6 +1020,11 @@ def fp(im):
     return im
 # end of fp 
 
+def fptest(im):
+    im.formPair()
+    return im
+# end of fptest
+
 def gf(im):
     im.genFeatures()
     return im
@@ -1401,7 +1406,9 @@ def parsingtrain(args):
 # end of parsingtrain
 
 def ps(im, parsingArg):
+    print "parsing file: {}".format(im.filename),
     im.generateSymbList(parsingArg)
+    print 'Done'
     
 #     filename = os.path.basename(im.filename)
 #     filename = "{}.pickle".format(filename)
@@ -1410,8 +1417,9 @@ def ps(im, parsingArg):
 #     pickle.dump(im.symbol, h)
 #     pickle.dump(im.stroke, h)
 #     h.close()
-    
+    print 'symbol list to mathml: {}'.format(im.filename),
     im.symbList2XML()
+    print 'Done'
     return im
 # end of ps(im, )
 
@@ -1521,7 +1529,7 @@ def parsing(args):
 
         start = time.time()
         p = multiprocessing.Pool(processes=nProcesses)        
-        testData = p.map(fp, testData)
+        testData = p.map(fptest, testData)
         p.close()
         p.join()
 
@@ -1602,16 +1610,16 @@ def parsing(args):
     
     start = time.clock()
     
-#     if len(testData) > nProcesses:
-# 
-#         p = multiprocessing.Pool(processes=nProcesses)
-#         mapArg = itertools.izip(testData, itertools.repeat(parsingArg))
-#         testData = p.map(ps_star, mapArg)
-#         p.close()
-#         p.join()
-#     else:
-    for im in testData:
-            ps(im, parsingArg)
+    if len(testData) > nProcesses:
+
+        p = multiprocessing.Pool(processes=nProcesses)
+        mapArg = itertools.izip(testData, itertools.repeat(parsingArg))
+        testData = p.map(ps_star, mapArg)
+        p.close()
+        p.join()
+    else:
+        for i in range(len(testData)):
+            testData[i] = ps(testData[i], parsingArg)
     
 #     for im in testData:
 #         print "The Latex expression of {} is:".format(im.filename)

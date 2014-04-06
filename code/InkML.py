@@ -970,6 +970,18 @@ class InkML(object):
         for key in sorted(self.symbol.keys(), key=lambda k: int(k.split('_')[1])):
             symb = {'id':key, 'lab':self.symbol[key]['lab']}
             self.symbList.append(symb)
+        
+        symb = self.symbList[-1]
+        if symb['lab'] == '\\sqrt':
+            del self.symbList[-1]
+            self.symbList.insert(-1,symb)
+        for i in range(len(self.symbList)-1, -1, -1):
+            symb = self.symbList[i]
+            if symb['lab'] == '\\sqrt':
+                openb = {'id': 'None', 'lab':'{'}
+                closeb = {'id': 'None', 'lab':'}'}
+                self.symbList.insert(i+2, closeb)
+                self.symbList.insert(i+1, openb)
     # end of generateSymbList(self)
     
     def generateSymbList2(self, parsingArg):
