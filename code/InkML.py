@@ -1202,10 +1202,9 @@ class InkML(object):
                                 pIdxs.append(nIdx)
                             else:
                                 bIdxs.append(nIdx)
-                if nHO > 0:
-                    sqIdxs.append(sIdx)
-                    spIdxs.append(pIdxs)
-                    sbIdxs.append(bIdxs)
+                sqIdxs.append(sIdx)
+                spIdxs.append(pIdxs)
+                sbIdxs.append(bIdxs)
                     
         symbOut = []
         if len(sqIdxs) > 0: # There is at least one \sqrt sign in the expression 
@@ -1708,10 +1707,6 @@ class InkML(object):
         annXML = ET.Element('annotationXML',{'encoding': "Content-MathML"})
         mathml = ET.SubElement(annXML, 'math', {'xmlns':'http://www.w3.org/1998/Math/MathML'})
         
-#         print 'before',
-#         for s in self.symbList:
-#             print s['lab'],
-#         print
         if len(self.symbList) > 1:
             subList2xml(mathml, self.symbList)
         elif len(self.symbList) == 1:
