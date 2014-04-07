@@ -240,8 +240,9 @@ class InkML(object):
                 self.UI = ann.text
                  
         annXML = root.find('{0}annotationXML'.format(namespace))
-        Load_xml_truth(self.XML_GT, annXML[0])
-        norm_mathMLNorm(self.XML_GT);
+        if (annXML != None) and (len(annXML) > 0):
+            Load_xml_truth(self.XML_GT, annXML[0])
+            norm_mathMLNorm(self.XML_GT);
         
         for trace in root.iter('{0}trace'.format(namespace)):
             strk = {}
@@ -251,27 +252,28 @@ class InkML(object):
         #symbol ID, to distinguish different symbols with same label, if symbol without any annotationXML
         symbID = 0;
         group = root.find('{0}traceGroup'.format(namespace))
-        for subgroup in group.findall('{0}traceGroup'.format(namespace)):
-             
-            lab = subgroup.find('{0}annotation'.format(namespace)).text
-            annXML_G = subgroup.find('{0}annotationXML'.format(namespace))
-            sid = ''
-            if (annXML_G is not None) and annXML_G.attrib.has_key('href'):
-                sid = annXML_G.attrib['href']
-            if sid == '':
-                sid = "AUTO_{}".format(symbID)
-             
-            strokeList = []
-             
-            for traceView in subgroup.findall('{0}traceView'.format(namespace)):
-                self.strokeTruth[traceView.attrib['traceDataRef']]['id'] = sid
-                self.strokeTruth[traceView.attrib['traceDataRef']]['lab'] = lab
-                strokeList.append(traceView.attrib['traceDataRef'])
-             
-            if len(strokeList) > 0:
-                symb = {'lab': lab, 'strokes': strokeList}
-                self.symbolTruth[sid] = symb
-                symbID += 1
+        if (group != None):
+            for subgroup in group.findall('{0}traceGroup'.format(namespace)):
+                 
+                lab = subgroup.find('{0}annotation'.format(namespace)).text
+                annXML_G = subgroup.find('{0}annotationXML'.format(namespace))
+                sid = ''
+                if (annXML_G is not None) and annXML_G.attrib.has_key('href'):
+                    sid = annXML_G.attrib['href']
+                if sid == '':
+                    sid = "AUTO_{}".format(symbID)
+                 
+                strokeList = []
+                 
+                for traceView in subgroup.findall('{0}traceView'.format(namespace)):
+                    self.strokeTruth[traceView.attrib['traceDataRef']]['id'] = sid
+                    self.strokeTruth[traceView.attrib['traceDataRef']]['lab'] = lab
+                    strokeList.append(traceView.attrib['traceDataRef'])
+                 
+                if len(strokeList) > 0:
+                    symb = {'lab': lab, 'strokes': strokeList}
+                    self.symbolTruth[sid] = symb
+                    symbID += 1
                 
         self.NBSYMB = symbID
         
