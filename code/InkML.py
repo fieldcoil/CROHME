@@ -987,14 +987,14 @@ class InkML(object):
     def generateSymbList2(self, parsingArg):
         self.preFormCharPair()
         symbList = []
-        for key in self.symbol.iterkeys():
+        for key in sorted(self.symbol.keys(), key=lambda k: int(k.split('_')[1])):
             box = np.array(self.symbBox(key))
             width = box[2]-box[0]
             height = box[3]-box[1]
             symb = {'id':key, 'lab':self.symbol[key]['lab'], 
                     'box':box, 'width':width, 'height':height}
             symbList.append(symb)
-        
+
         # Formating symbol list in a reasonable sequence
         symbList = sorted(symbList, key=lambda x: x['box'][0])
         
@@ -1708,6 +1708,10 @@ class InkML(object):
         annXML = ET.Element('annotationXML',{'encoding': "Content-MathML"})
         mathml = ET.SubElement(annXML, 'math', {'xmlns':'http://www.w3.org/1998/Math/MathML'})
         
+#         print 'before',
+#         for s in self.symbList:
+#             print s['lab'],
+#         print
         if len(self.symbList) > 1:
             subList2xml(mathml, self.symbList)
         elif len(self.symbList) == 1:
@@ -1760,7 +1764,6 @@ def subList2xml(parent, symbList):
         else:
             addXMLNode(curr, subList[0])
             
-
     elif symb2['lab'] == '_':
         # sub
         bracesPos = findBraces(symbList, [['{','}']])
@@ -1853,6 +1856,17 @@ def subList2xml(parent, symbList):
                 subList2xml(curr, leftList)
             elif len(leftList) == 1:
                 addXMLNode(curr, leftList[0])
+    
+    elif (symb1['lab'] == '^') or (symb1['lab'] == '_'):
+        # there is no base symbol for sup or sub, we just igore this sub or sup
+        bracesPos = findBraces(symbList, [['{','}']])
+        start = bracesPos[0][0]
+        end = bracesPos[0][1]
+        subList = symbList[:]
+        del subList[end]
+        del subList[start]
+        del subList[0]
+        subList2xml(parent, subList)
 
     else:
         subList = symbList[1:]
