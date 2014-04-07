@@ -1082,8 +1082,18 @@ class InkML(object):
                     elif baseFbIdxs[i] > rIdx:
                         baseFbIdxs[i] -= 1
                 del base[rIdx]
-                            
+            
+#             print 'base before sux:'
+#             for s in base:
+#                 print s['lab'],
+#             print baseFbIdxs
+            
             base = self.processSYMBList(base, baseFbIdxs, parsingArg)
+
+#             print 'base after sux:'
+#             for s in base:
+#                 print s['lab'],
+#             print
             
             for i in range(len(fbIdxs)-1, -1, -1):
                 if len(nums[i]) > 0:
@@ -1358,7 +1368,7 @@ class InkML(object):
                 if (len(suxList) > 0) and (suxList[-1]['tag'] == 'SUP'):
                     del suxList[-1]
                 else:
-                    aY[i] = tagCharPair['begeinSUB']
+                    aY[i] = tagCharPair['beginSUB']
                     su = {'tag':'SUB', 'pos':i}
                     suxList.append(su)
             
@@ -1366,7 +1376,7 @@ class InkML(object):
                 if (len(suxList) > 0) and (suxList[-1]['tag'] == 'SUB'):
                     del suxList[-1]
                 else:
-                    aY[i] = tagCharPair['begeinSUP']
+                    aY[i] = tagCharPair['beginSUP']
                     su = {'tag':'SUP', 'pos':i}
                     suxList.append(su)
             
@@ -1376,8 +1386,9 @@ class InkML(object):
                     su = {'tag':'SUB', 'pos':i}
                     suxList.append(su)
                 else:
-                    # I have no idea to deal this situation
-                    pass
+                    aY[i] = tagCharPair['beginSUB']
+                    su = {'tag':'SUB', 'pos':i}
+                    suxList.append(su)
             
             elif y == tagCharPair['SUB2SUP']:
                 if (len(suxList) > 0) and (suxList[-1]['tag'] == 'SUB'):
@@ -1385,8 +1396,10 @@ class InkML(object):
                     su = {'tag':'SUP', 'pos':i}
                     suxList.append(su)
                 else:
-                    # I have no idea to deal this situation
-                    pass
+                    aY[i] = tagCharPair['beginSUP']
+                    su = {'tag':'SUP', 'pos':i}
+                    suxList.append(su)
+                    
         if len(suxList) > 0:
             for i in range(len(suxList)-1, -1, -1):
                 startIdx = suxList[i]['pos']
@@ -1480,8 +1493,14 @@ class InkML(object):
                 currentIdx = 0
                 for idx in idxs:
                     subList = base[currentIdx:idx]
+#                     print 'before',
+#                     for s in subList:
+#                         print s['lab'],
                     if len(subList) > 1:
                         subList = self.sortSYMB(subList, parsingArg)
+#                     print 'after',
+#                     for s in subList:
+#                         print s['lab'],
                     baseOut += subList
                     baseOut.append(base[idx])
                     currentIdx = idx+1
@@ -1680,6 +1699,11 @@ class InkML(object):
     
     def symbList2XML(self):
         assert self.symbList != None, 'Please call generateSymbList before calling me'
+        
+#         print "the symbol list of {} is:".format(self.filename)
+#         for s in self.symbList:
+#             print s['lab'],
+#         print
         
         annXML = ET.Element('annotationXML',{'encoding': "Content-MathML"})
         mathml = ET.SubElement(annXML, 'math', {'xmlns':'http://www.w3.org/1998/Math/MathML'})
