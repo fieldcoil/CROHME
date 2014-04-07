@@ -959,10 +959,12 @@ class InkML(object):
             self.generateSymbList2(parsingArg)
             if len(self.symbList) < 1:
                 self.generateSymbList1()
+            self.symbList2XML()
         except:
             
             print "**** An error was occurred during generating 2D Latex string! 1D Latex string is generated. Filename: {}".format(self.filename)
             self.generateSymbList1()
+            self.symbList2XML()
     # end of generateSymbList(self):
     
     def generateSymbList1(self):
@@ -1165,7 +1167,8 @@ class InkML(object):
             symbList.insert(-1,symb)
         for i in range(len(symbList)-2, -1, -1):
             symb = symbList[i]
-            if (symb['lab'] == '\\sqrt') and (symbList[i+1]['id'] != 'NULL'):
+            if ((symb['lab'] == '\\sqrt') and (symbList[i+1]['id'] != 'NULL') and 
+                (symbList[i+1]['lab'] != '\\sqrt') and (symbList[i+1]['lab'] != '\\frac')):
                 openb = {'id': 'NULL', 'lab':'{'}
                 closeb = {'id': 'NULL', 'lab':'}'}
                 symbList.insert(i+2, closeb)

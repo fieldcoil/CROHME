@@ -1417,9 +1417,7 @@ def ps(im, parsingArg):
 #     pickle.dump(im.symbol, h)
 #     pickle.dump(im.stroke, h)
 #     h.close()
-    print 'symbol list to mathml: {}'.format(im.filename),
-    im.symbList2XML()
-    print 'Done'
+
     return im
 # end of ps(im, )
 
@@ -1610,7 +1608,7 @@ def parsing(args):
     
     start = time.clock()
     
-    if False :#len(testData) > nProcesses:
+    if len(testData) > nProcesses:
 
         p = multiprocessing.Pool(processes=nProcesses)
         mapArg = itertools.izip(testData, itertools.repeat(parsingArg))
