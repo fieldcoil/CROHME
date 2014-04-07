@@ -978,8 +978,8 @@ class InkML(object):
         for i in range(len(self.symbList)-1, -1, -1):
             symb = self.symbList[i]
             if symb['lab'] == '\\sqrt':
-                openb = {'id': 'None', 'lab':'{'}
-                closeb = {'id': 'None', 'lab':'}'}
+                openb = {'id': 'NULL', 'lab':'{'}
+                closeb = {'id': 'NULL', 'lab':'}'}
                 self.symbList.insert(i+2, closeb)
                 self.symbList.insert(i+1, openb)
     # end of generateSymbList(self)
@@ -1157,6 +1157,20 @@ class InkML(object):
         else:
             symbList = self.sortSYMB(symbList, parsingArg)
         
+        
+        # find '\\sqrt' without brances
+        symb = symbList[-1]
+        if symb['lab'] == '\\sqrt':
+            del symbList[-1]
+            symbList.insert(-1,symb)
+        for i in range(len(symbList)-2, -1, -1):
+            symb = symbList[i]
+            if (symb['lab'] == '\\sqrt') and (symbList[i+1]['id'] != 'NULL'):
+                openb = {'id': 'NULL', 'lab':'{'}
+                closeb = {'id': 'NULL', 'lab':'}'}
+                symbList.insert(i+2, closeb)
+                symbList.insert(i+1, openb)
+                
         self.symbList = symbList
     # end of generateSymbList(self)
     
@@ -1699,10 +1713,10 @@ class InkML(object):
     def symbList2XML(self):
         assert self.symbList != None, 'Please call generateSymbList before calling me'
         
-#         print "the symbol list of {} is:".format(self.filename)
-#         for s in self.symbList:
-#             print s['lab'],
-#         print
+        print "the symbol list of {} is:".format(self.filename)
+        for s in self.symbList:
+            print s['lab'],
+        print
         
         annXML = ET.Element('annotationXML',{'encoding': "Content-MathML"})
         mathml = ET.SubElement(annXML, 'math', {'xmlns':'http://www.w3.org/1998/Math/MathML'})
