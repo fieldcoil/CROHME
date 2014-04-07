@@ -1716,10 +1716,10 @@ class InkML(object):
     def symbList2XML(self):
         assert self.symbList != None, 'Please call generateSymbList before calling me'
         
-        print "the symbol list of {} is:".format(self.filename)
-        for s in self.symbList:
-            print s['lab'],
-        print
+#         print "the symbol list of {} is:".format(self.filename)
+#         for s in self.symbList:
+#             print s['lab'],
+#         print
         
         annXML = ET.Element('annotationXML',{'encoding': "Content-MathML"})
         mathml = ET.SubElement(annXML, 'math', {'xmlns':'http://www.w3.org/1998/Math/MathML'})
