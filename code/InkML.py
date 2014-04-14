@@ -236,7 +236,7 @@ class InkML(object):
         root = tree.getroot()
  
         for ann in root.iter('{0}annotation'.format(namespace)):
-            if ann.attrib['type'] == "UI":
+            if ann.attrib.has_key('type') and ann.attrib['type'] == "UI":
                 self.UI = ann.text
                  
         annXML = root.find('{0}annotationXML'.format(namespace))
@@ -2522,7 +2522,7 @@ def XMLindent(elem, level=0):
 if __name__ == '__main__':
     import os
     import pickle
-    im1 = InkML('../TrainINKML_v3/expressmatch/81_Nina.inkml')
+    im1 = InkML('../TrainingData/CROHME2013_test/rit_4295_2.inkml')
     # im1 = InkML('../TrainINKML_v3/MathBrush/2009210-947-105.inkml')
     # im1 = InkML('../TrainINKML_v3/KAIST/traindata2_25_sub_88.inkml')
 
