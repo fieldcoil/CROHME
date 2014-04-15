@@ -1,18 +1,15 @@
 ###########################################################################
 #
-# CSCI-737 Pattern Recognition
-# Fall, 2013
-# Project #3
+# CROHME: Competition on Recognition of Online Handwritten 
+#         Mathematical Expressions
+# Spring, 2014
 # 
 # Author: Wei Yao (wxy3806_AT_rit.edu) & Fan Wang (fxw6000_AT_rit.edu)
-# Date: Dec 11 2013
+# Date: Apr 15 2014
 #
 ###########################################################################
 
 Part of this program was rewritten of the perl script crohme2lg.pl, which is
-a part of CROHMElib (http://www.cs.rit.edu/~dprl/Software.html).
-
-OurGrammar.xml was modified from GramCROHMEpart4_revision2.xml, which is 
 a part of CROHMElib (http://www.cs.rit.edu/~dprl/Software.html).
 
 Thanks to the authors: H. Mouchère and R. Zanibbi
@@ -28,15 +25,12 @@ File list:
 ==========
 libsvm-3.17.tar.gz  : The source code of libsvm
 [code]
-  prj3.py           : The main program of the project, please read following
+  crohme.py         : The main program of the project, please read following
                       content for the usage
   InkML.py          : Define the class InkML to do the processes related to 
                       inkml files, such as read a inkml file, write a truth 
                       lg file, preprocess and extract the features
-  CYK.py			: Define the class CYK to do the processes related t0
-                      CYK parsing, such as read grammar, form the grammar
-                      to CNF, parsing Latex string.
-  OurGrammar.xml    : Modified grammar
+  routines.py		: A python model file contains some common functions
   svm_test.py       : A small program to test if libsvm works on your system
   svm.py            : The low-level python wrap of libsvm
   svmutil.py        : The high-level python wrap of libsvm
@@ -49,13 +43,19 @@ libsvm-3.17.tar.gz  : The source code of libsvm
                       mean, and standard deviation of segmentation training 
                       features.
                       {set} are: 01, 02, 12, all                       
-  seg_model_{set}   : The model of segmentation. The possible values of 
-                      {set} are: 01, 02, 12, all 
+  PCA_parsing_{set}.dump: A python pickle dump file which saves the eigenvectors, 
+                      mean, and standard deviation of parsing training 
+                      features.
+                      {set} are: 01, 02, 12, all                       
   svm_model_{set}   : The modle of XVM classifier. The possible values of
                       {set} are: 01, 02, 12, all
+  seg_model_{set}   : The model of segmentation. The possible values of 
+                      {set} are: 01, 02, 12, all 
+  parsing_model_{set}: The model of parsing. The possible values of 
+                      {set} are: 01, 02, 12, all 
   scaling_{set}     : The scaling parameter for scale feature matrices
                       The possible values of {set} are: 01, 02, 12, all  
-  seg_scaling_{set} : The scaling parameter for scale segmentation feature 
+  parsing_scaling_{set}: The scaling parameter for scale parsing feature 
                       matrices
                       The possible values of {set} are: 01, 02, 12, all  
   LICENSE_CROHMElib : License and copyright of CROHMElib
@@ -68,354 +68,29 @@ libsvm-3.17.tar.gz  : The source code of libsvm
     libsvm.so.2     : The dynamic-link library of libsvm for Mac OS X
                       (compiled on my desktop, Mac OS X 10.8)
 
+Usage of crohme.py:
+==================
+NOTE: please run "./svm_test.py" before running this program to ensure that
+pre-compiled libsvm works on your platform. Read next section for details.
 
-Usage of prj3.py:
-=================
+* Task 1
+--------
+To classify all the inkml files in the input_dir and save the results in 
+the output_file with the default arguments, just run:
+
+./crohme.py symbol -i input_dir -o output_file
+Please read below details for the available arguments.
+
+
+* Task 2
+--------
 To segment and classify, and parse all the inkml files in the input_dir and save 
 the lg files in the output_dir with the default arguments, just run:
 
-./prj3.py parsing -i input_dir -o output_dir
+./crohme.py parsing -i input_dir -o output_dir
 
-It will use the training parameters of all folds of inkml files and employ 
-6 processes to extract the features from test inkml files. Please read below details 
-for the available arguments.
-
-
-usage: prj3.py {split,train,classify,segtrain,segment,parsing} [-options]
-
-Classifier for CSCI-737 Pattern Recognition Project #3.
-
-positional arguments:
-  {split,train,classify,segtrain,segment}
-                        Please specify the command
-    split               split the training data into three folds
-    train               train the classifier from the training data
-    classify            classify the test data by the specified classifier and
-                        parameter
-    segtrain            train the segmentation classifier from the training
-                        data
-    segment             segment and classify the test data by the specified
-                        parameter
-    parsing             segment, classify and parse the test data by the 
-                        specified parameter
-
-
-1. split:
----------
-It is the same function as the prj1.py. Please read README of Porject 1 which 
-is quoted below.
-
-2. train:
----------
-It is the same function as the prj1.py. Please read README of Porject 1.
-
-3. classify:
-------------
-It is the same function as the prj1.py. Please read README of Porject 1.
-
-4. segtrain:
-------------
-It is the same function as the prj2.py. Please read README of Porject 2 which 
-is quoted below.
-
-
-5. segment:
-------------
-It is the same function as the prj2.py. Please read README of Porject 2.
-
-
-6. parsing:
------------
-usage: prj3.py parsing [-h] -i INPUT [-f FOLDS] [-b SYMBOLS] [-e {0,1,2,all}]
-                       [-s {01,02,12,all}] [-m MODEL] [-g SEGMODEL]
-                       [-a SCALING] [-l SEGSCALING] [-c PCA]
-                       [-p {1,2, ...,24}]
-                       -o OUTPUT
-
-segment, classify and parse the test data by the specified parameters
-optional arguments:
-  -h, --help            show this help message and exit
-  -i INPUT, --input INPUT
-             (required) specify a test file or a directory which contains the
-                        test files
-  -f FOLDS, --folds FOLDS
-             (optional) specify the file which stores the splitting
-                        information. It's required when the testset is specified.
-                        if this option is not provided, the default value 
-                        "folds.dump" will be used                        
-  -b SYMBOLS, --symbols SYMBOLS
-             (optional) specify the file which store the symbols
-                        if this option is not provided, the default value 
-                        "symb.dump" will be used
-  -e {0,1,2,all}, --testset {0,1,2,all}
-             (optional) specify the set of testing data
-                        this option only works when input = train_data_directory
-  -s {01,02,12,all}, --trainset {01,02,12,all}
-             (optional) specify the set of training data
-                        if this option is not provided, the default value 
-                        "all" will be used
-  -m MODEL, --model MODEL
-             (optional) specify the model filename template for classification
-                        if this option is not provided, the default value 
-                        "svm_model_{}" will be used
-  -g SEGMODEL, --segmodel SEGMODEL
-             (optional) specify the model filename template for segmentation
-                        if this option is not provided, the default value 
-                        "seg_model_{}" will be used
-  -a SCALING, --scaling SCALING
-             (optional) specify the filename template which saves the scaling parameters
-                        if this option is not provided, the default value 
-                        "scaling_{}" will be used
-  -l SEGSCALING, --segscaling SEGSCALING
-             (optional) specify the filename template which saves the segmentation
-                        scaling parameters
-                        if this option is not provided, the default value 
-                        "seg_scaling_{}" will be used
-  -c PCA, --pca PCA 
-             (optional) specify the filename template which saves the PCA paramenters
-                        if this option is not provided, the default value 
-                        "PCA_{}.dump" will be used
-  -p {1,2,3, ...,24}, --processes {1,2,3, ...,24}
-             (optional) specify the number of processes when extracting the
-                        features of stroke pairs. This number should be 
-                        equal or less than the number of virtual processors. 
-                        Command `$ cat /proc/cpuinfo` returns the CPU info
-                        on Linux. glados.cs.rit.edu has 8 virtual processors,
-                        so this number should be equal or less than 8 on it.
-                        if this option is not provided, the default value 
-                        "6" will be used
-  -o OUTPUT, --output OUTPUT
-             (required) specify the output filename or directory (depends on
-                        the input)
-
-Examples:
----------
-(1). This command uses "../TrainINKML_v3/expressmatch/70_carlos.inkml" as input file,
-and perform segmentation, classification and parsing with the training set all, then 
-output to 70_carlos.lg.
-
-./prj3.py parsing -i ../TrainINKML_v3/expressmatch/70_carlos.inkml -s all -o 70_carlos.lg
-
-
-(2). This command will segment, classify and parse all the files in the directory "../TrainINKML_v3/" 
-with the training set all. Then the .lg files will be saved in the directory "../parsing_all"
-
-./prj3.py parsing -i ../TrainINKML_v3/ -s all -o ../parsing_all
-
-
-(3). This command will segment, classify and parse the folder 2 files in the directory "../TrainINKML_v3/"
-with the training set 01. Then the .lg files will be saved in the directory "../parsing_2"
-
-./prj3.py parsing -i ../TrainINKML_v3 -e 2 -s 01 -o ../parsing_2
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-README of Project 2
-
-Usage of prj2.py:
-=================
-To segment and classify all the inkml files in the input_dir and save the lg files
-in the output_dir with the default arguments, just run:
-
-./prj2.py segment -i input_dir -o output_dir
-
-It will use the training parameters of all folds of inkml files and employ 
-6 processes to extract the features from test inkml files. Please read below details 
-for the available arguments.
-
-
-usage: prj2.py {split,train,classify,segtrain,segment} [-options]
-
-Classifier for CSCI-737 Pattern Recognition Project #2.
-
-positional arguments:
-  {split,train,classify,segtrain,segment}
-                        Please specify the command
-    split               split the training data into three folds
-    train               train the classifier from the training data
-    classify            classify the test data by the specified classifier and
-                        parameter
-    segtrain            train the segmentation classifier from the training
-                        data
-    segment             segment and classify the test data by the specified
-                        parameter
-
-
-1. split:
----------
-It is the same function as the prj1.py. Please read README of Porject 1 which 
-is quoted below.
-
-2. train:
----------
-It is the same function as the prj1.py. Please read README of Porject 1.
-
-3. classify:
-------------
-It is the same function as the prj1.py. Please read README of Porject 1.
-
-4. segtrain:
-------------
-usage: prj2.py segtrain [-h] -i INPUT [-f FOLDS] [-s {01,02,12,all}]
-                        [-p {1,2,3, ...,24}]
-
-generate the segmentation models from the specified training data
-optional arguments:
-  -h, --help            show this help message and exit
-  -i INPUT, --input INPUT
-             (required) specify the directory which contains the training data
-  -f FOLDS, --folds FOLDS
-             (optional) specify the file which stores the splitting
-                        information
-                        if this option is not provided, the default value 
-                        "folds.dump" will be used
-  -s {01,02,12,all}, --trainset {01,02,12,all}
-             (required) specify the set of training data
-  -p {1,2,3, ...,24}, --processes {1,2,3,...,24}
-             (optional) specify the number of processes when extracting the
-                        features of stroke pairs. This number should be 
-                        equal or less than the number of virtual processors. 
-                        Command `$ cat /proc/cpuinfo` returns the CPU info
-                        on Linux. glados.cs.rit.edu has 8 virtual processors,
-                        so this number should be equal or less than 8 on it.
-                        if this option is not provided, the default value 
-                        "6" will be used
-
-Our program will generate the classifier parameter files according to the list
-of specified train set: PCA_{set}.dump, seg_model_{set}, seg_scaling_{set}
-
-Example:
---------
-./prj2.py segtrain -i ../TrainINKML_v3 -s 01 -s 02 -s 12 -s all -p 8
-
-5. segment:
------------
-usage: prj2.py segment [-h] -i INPUT [-f FOLDS] [-b SYMBOLS] [-e {0,1,2,all}]
-                       [-s {01,02,12,all}] [-m MODEL] [-g SEGMODEL]
-                       [-a SCALING] [-l SEGSCALING] [-c PCA]
-                       [-p {1,2, ...,24}]
-                       -o OUTPUT
-
-segment and classify the test data by the specified parameters
-optional arguments:
-  -h, --help            show this help message and exit
-  -i INPUT, --input INPUT
-             (required) specify a test file or a directory which contains the
-                        test files
-  -f FOLDS, --folds FOLDS
-             (optional) specify the file which stores the splitting
-                        information. It's required when the testset is specified.
-                        if this option is not provided, the default value 
-                        "folds.dump" will be used                        
-  -b SYMBOLS, --symbols SYMBOLS
-             (optional) specify the file which store the symbols
-                        if this option is not provided, the default value 
-                        "symb.dump" will be used
-  -e {0,1,2,all}, --testset {0,1,2,all}
-             (optional) specify the set of testing data
-                        this option only works when input = train_data_directory
-  -s {01,02,12,all}, --trainset {01,02,12,all}
-             (optional) specify the set of training data
-                        if this option is not provided, the default value 
-                        "all" will be used
-  -m MODEL, --model MODEL
-             (optional) specify the model filename template for classification
-                        if this option is not provided, the default value 
-                        "svm_model_{}" will be used
-  -g SEGMODEL, --segmodel SEGMODEL
-             (optional) specify the model filename template for segmentation
-                        if this option is not provided, the default value 
-                        "seg_model_{}" will be used
-  -a SCALING, --scaling SCALING
-             (optional) specify the filename template which saves the scaling parameters
-                        if this option is not provided, the default value 
-                        "scaling_{}" will be used
-  -l SEGSCALING, --segscaling SEGSCALING
-             (optional) specify the filename template which saves the segmentation
-                        scaling parameters
-                        if this option is not provided, the default value 
-                        "seg_scaling_{}" will be used
-  -c PCA, --pca PCA 
-             (optional) specify the filename template which saves the PCA paramenters
-                        if this option is not provided, the default value 
-                        "PCA_{}.dump" will be used
-  -p {1,2,3, ...,24}, --processes {1,2,3, ...,24}
-             (optional) specify the number of processes when extracting the
-                        features of stroke pairs. This number should be 
-                        equal or less than the number of virtual processors. 
-                        Command `$ cat /proc/cpuinfo` returns the CPU info
-                        on Linux. glados.cs.rit.edu has 8 virtual processors,
-                        so this number should be equal or less than 8 on it.
-                        if this option is not provided, the default value 
-                        "6" will be used
-  -o OUTPUT, --output OUTPUT
-             (required) specify the output filename or directory (depends on
-                        the input)
-
-Examples:
----------
-(1). This command uses "../TrainINKML_v3/expressmatch/70_carlos.inkml" as input file,
-and perform segmentation and classification with the training set all, then output to 
-70_carlos.lg.
-
-./prj2.py segment -i ../TrainINKML_v3/expressmatch/70_carlos.inkml -s all -o 70_carlos.lg
-
-
-(2). This command will segment and classify all the files in the directory "../TrainINKML_v3/" 
-with the training set all. Then the .lg files will be saved in the directory "../seg_all"
-
-./prj2.py segment -i ../TrainINKML_v3/ -s all -o ../seg_all
-
-
-(3). This command will segment and classify the folder 2 files in the directory "../TrainINKML_v3/"
-with the training set 01. Then the .lg files will be saved in the directory "../seg_2"
-
-./prj1.py segment -i ../TrainINKML_v3 -e 2 -s 01 -o ../svm_2
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-README of Project 1
-
-File list:
-==========
-libsvm-3.17.tar.gz  : The source code of libsvm
-[code]
-  prj1.py           : The main program of the project, please read following
-                      content for the usage
-  InkML.py          : Define the class InkML to do the processes related to 
-                      inkml files, such as read a inkml file, write a truth 
-                      lg file, preprocess and extract the features
-  svm_test.py       : A small program to test if libsvm works on your system
-  svm.py            : The low-level python wrap of libsvm
-  svmutil.py        : The high-level python wrap of libsvm
-  libsvm.so.2       : The dynamic-link library of libsvm for linux i686 
-                      (compiled on glados.cs.rit.edu, Ubuntu 12.04LTS, i686)
-  folds.dump        : A python pickle dump file which saves the folding 
-                      information about training data
-  symb.dump         : A python pickle dump file which saves the symbol list
-  knn_model_{set}   : The model of k-nn classifier. The possible values of 
-                      {set} are: 01, 02, 12, all 
-  svm_model_{set}   : The modle of XVM classifier. The possible values of
-                      {set} are: 01, 02, 12, all
-  scaling_{set}     : The scaling parameter for scale feature matrices
-                      The possible values of {set} are: 01, 02, 12, all  
-                      * Only applied on SVM classifier
-  folds.txt         : "Human-readable" folding information
-  prior.csv         : The probability of symbols in all the training data
-                      and each sub fold
-  
-  COPYRIGHT_libsvm  : Copyright of libsvm
-  README            : This file
-  [linux x86_64]
-    libsvm.so.2     : The dynamic-link library of libsvm for linux x86_64
-                      (compiled on armstrong.cis.rit.edu, Fedora 18, x86_64)
-  [macos]
-    libsvm.so.2     : The dynamic-link library of libsvm for Mac OS X
-                      (compiled on my desktop, Mac OS X 10.8)
+It will employ 6 processes to extract the features from test inkml files. 
+Please read below details for the available arguments.
 
 
 About libsvm:
@@ -504,26 +179,32 @@ Then copy libsvm.so.2 form the folder libsvm-3.17 to the code folder which
 contains "svm_test.py" and replace the old one.
 
 
-Usage of prj1.py:
-=================
-NOTE: please run "./svm_test.py" before running this program to ensure that
-pre-compiled libsvm works on your platform.
 
+Details of crohme.py
+====================
+usage: crohme.py {split,train,classify,segtrain,segment,parsing,symbol} [-options]
 
-usage: prj1.py {split,train,classify} [-options]
+Classifier for CROHME 2014.
 
 positional arguments:
-  {split,train,classify}
+  {split,train,classify,segtrain,segment,symbol}
                         Please specify the command
     split               split the training data into three folds
     train               train the classifier from the training data
     classify            classify the test data by the specified classifier and
                         parameter
+    segtrain            train the segmentation classifier from the training
+                        data
+    segment             segment and classify the test data by the specified
+                        parameter
+    parsing             segment, classify and parse the test data by the 
+                        specified parameter
+    symbol              classify the test data by the specified parameter
 
 
 1. split:
 ---------
-usage: prj1.py split [-h] -i INPUT [-f FOLDS] [-b SYMBOLS] [-t TXTFOLDS]
+usage: crohme.py split [-h] -i INPUT [-f FOLDS] [-b SYMBOLS] [-t TXTFOLDS]
                      [-p PRIOR]
                      
 Split training data into three folds with almost equivalent probability.
@@ -556,12 +237,12 @@ of the inkml files.
  
 Example:
 --------
-./prj1.py split -i ../TrainINKML_v3 -t folds.txt -p prior.csv
+./crohme.py split -i ../TrainINKML_v3 -t folds.txt -p prior.csv
 
 
 2. train:
 ---------
-usage: prj1.py train [-h] -i INPUT [-f FOLDS] [-b SYMBOLS] [-s {01,02,12,all}]
+usage: crohme.py train [-h] -i INPUT [-f FOLDS] [-b SYMBOLS] [-s {01,02,12,all}]
 
 generate the classifier models from the specified training data
 optional arguments:
@@ -585,12 +266,12 @@ of specified train set: svm_model_{set}, knn_model_{set}, scaling_{set}
 
 Example:
 --------
-./prj1.py train -i ../TrainINKML_v3 -s 01 -s 02 -s 12 -s all
+./crohme.py train -i ../TrainINKML_v3 -s 01 -s 02 -s 12 -s all
 
 
 3. classify
 -----------
-usage: prj1.py classify [-h] -i INPUT [-f FOLDS] [-b SYMBOLS] [-e {0,1,2,all}]
+usage: crohme.py classify [-h] -i INPUT [-f FOLDS] [-b SYMBOLS] [-e {0,1,2,all}]
                         [-c {1nn,svm}] -m MODEL -a SCALING -o OUTPUT
 
 classify the test data by the specified classifier and parameter
@@ -632,33 +313,301 @@ Examples:
 and perform an SVM classification with svm_model_all and scaling_all,
 then output to 70_carlos.lg.
 
-./prj1.py classify -i ../TrainINKML_v3/expressmatch/70_carlos.inkml -c svm -m svm_model_all -a scaling_all -o 70_carlos.lg
+./crohme.py classify -i ../TrainINKML_v3/expressmatch/70_carlos.inkml -c svm -m svm_model_all -a scaling_all -o 70_carlos.lg
 
 
 (2). This command will classify all the files in the directory "../TrainINKML_v3/" with 
 the SVM classifier and use svm_model_all and scaling_all as training data.
 Then the .lg files will be saved in the directory "../svm_all"
 
-./prj1.py classify -i ../TrainINKML_v3/ -c svm -m svm_model_all -a scaling_all -o ../svm_all
+./crohme.py classify -i ../TrainINKML_v3/ -c svm -m svm_model_all -a scaling_all -o ../svm_all
 
 
 (3). This command will classify the folder 2 files in the directory "../TrainINKML_v3/"
 with the SVM classifier and use the training data of folder 0 & 1 (svm_model_01 & scaling_01)
 Then the .lg files will be saved in the directory "../svm_2"
 
-./prj1.py classify -i ../TrainINKML_v3 -f folds.dump -e 2 -c svm -m svm_model_01 -a scaling_01 -o ../svm_2
+./crohme.py classify -i ../TrainINKML_v3 -f folds.dump -e 2 -c svm -m svm_model_01 -a scaling_01 -o ../svm_2
 
 (4). This command will classify the folder 1 files in the directory "../TrainINKML_v3/"
 with the 1-NN classifier and use the training data of folder 0 & 2 (knn_model_02), 
 and data will be scaled before classification (scaling_02).
 Then the .lg files will be saved in the directory "../knn_1"
 
-./prj1.py classify -i ../TrainINKML_v3 -f folds.dump -e 1 -c 1nn -m knn_model_02 -a scaling_02 -o ../knn_1
+./crohme.py classify -i ../TrainINKML_v3 -f folds.dump -e 1 -c 1nn -m knn_model_02 -a scaling_02 -o ../knn_1
 
 (5). This command will classify the folder 0 files in the directory "../TrainINKML_v3/"
 with the 1-NN classifier and use the training data of folder 1 & 2 (knn_model_12), 
 and data will not be scaled before classification (not specify -a scaling_12).
 Then the .lg files will be saved in the directory "../knn_0"
 
-./prj1.py classify -i ../TrainINKML_v3 -f folds.dump -e 0 -c 1nn -m knn_model_12 -o ../knn_0
+./crohme.py classify -i ../TrainINKML_v3 -f folds.dump -e 0 -c 1nn -m knn_model_12 -o ../knn_0
+
+4. segtrain:
+------------
+usage: crohme.py segtrain [-h] -i INPUT [-f FOLDS] [-s {01,02,12,all}]
+                        [-p {1,2,3, ...,24}]
+
+generate the segmentation models from the specified training data
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUT, --input INPUT
+             (required) specify the directory which contains the training data
+  -f FOLDS, --folds FOLDS
+             (optional) specify the file which stores the splitting
+                        information
+                        if this option is not provided, the default value 
+                        "folds.dump" will be used
+  -s {01,02,12,all}, --trainset {01,02,12,all}
+             (required) specify the set of training data
+  -p {1,2,3, ...,24}, --processes {1,2,3,...,24}
+             (optional) specify the number of processes when extracting the
+                        features of stroke pairs. This number should be 
+                        equal or less than the number of virtual processors. 
+                        Command `$ cat /proc/cpuinfo` returns the CPU info
+                        on Linux. glados.cs.rit.edu has 8 virtual processors,
+                        so this number should be equal or less than 8 on it.
+                        if this option is not provided, the default value 
+                        "6" will be used
+
+Our program will generate the classifier parameter files according to the list
+of specified train set: PCA_{set}.dump, seg_model_{set}, seg_scaling_{set}
+
+Example:
+--------
+./crohme.py segtrain -i ../TrainINKML_v3 -s 01 -s 02 -s 12 -s all -p 8
+
+5. segment:
+-----------
+usage: crohme.py segment [-h] -i INPUT [-f FOLDS] [-b SYMBOLS] [-e {0,1,2,all}]
+                       [-s {01,02,12,all}] [-m MODEL] [-g SEGMODEL]
+                       [-a SCALING] [-l SEGSCALING] [-c PCA]
+                       [-p {1,2, ...,24}]
+                       -o OUTPUT
+
+segment and classify the test data by the specified parameters
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUT, --input INPUT
+             (required) specify a test file or a directory which contains the
+                        test files
+  -f FOLDS, --folds FOLDS
+             (optional) specify the file which stores the splitting
+                        information. It's required when the testset is specified.
+                        if this option is not provided, the default value 
+                        "folds.dump" will be used                        
+  -b SYMBOLS, --symbols SYMBOLS
+             (optional) specify the file which store the symbols
+                        if this option is not provided, the default value 
+                        "symb.dump" will be used
+  -e {0,1,2,all}, --testset {0,1,2,all}
+             (optional) specify the set of testing data
+                        this option only works when input = train_data_directory
+  -s {01,02,12,all}, --trainset {01,02,12,all}
+             (optional) specify the set of training data
+                        if this option is not provided, the default value 
+                        "all" will be used
+  -m MODEL, --model MODEL
+             (optional) specify the model filename template for classification
+                        if this option is not provided, the default value 
+                        "svm_model_{}" will be used
+  -g SEGMODEL, --segmodel SEGMODEL
+             (optional) specify the model filename template for segmentation
+                        if this option is not provided, the default value 
+                        "seg_model_{}" will be used
+  -a SCALING, --scaling SCALING
+             (optional) specify the filename template which saves the scaling parameters
+                        if this option is not provided, the default value 
+                        "scaling_{}" will be used
+  -l SEGSCALING, --segscaling SEGSCALING
+             (optional) specify the filename template which saves the segmentation
+                        scaling parameters
+                        if this option is not provided, the default value 
+                        "seg_scaling_{}" will be used
+  -c PCA, --pca PCA 
+             (optional) specify the filename template which saves the PCA paramenters
+                        if this option is not provided, the default value 
+                        "PCA_{}.dump" will be used
+  -p {1,2,3, ...,24}, --processes {1,2,3, ...,24}
+             (optional) specify the number of processes when extracting the
+                        features of stroke pairs. This number should be 
+                        equal or less than the number of virtual processors. 
+                        Command `$ cat /proc/cpuinfo` returns the CPU info
+                        on Linux. glados.cs.rit.edu has 8 virtual processors,
+                        so this number should be equal or less than 8 on it.
+                        if this option is not provided, the default value 
+                        "6" will be used
+  -o OUTPUT, --output OUTPUT
+             (required) specify the output filename or directory (depends on
+                        the input)
+
+Examples:
+---------
+(1). This command uses "../TrainINKML_v3/expressmatch/70_carlos.inkml" as input file,
+and perform segmentation and classification with the training set all, then output to 
+70_carlos.lg.
+
+./crohme.py segment -i ../TrainINKML_v3/expressmatch/70_carlos.inkml -s all -o 70_carlos.lg
+
+
+(2). This command will segment and classify all the files in the directory "../TrainINKML_v3/" 
+with the training set all. Then the .lg files will be saved in the directory "../seg_all"
+
+./crohme.py segment -i ../TrainINKML_v3/ -s all -o ../seg_all
+
+
+(3). This command will segment and classify the folder 2 files in the directory "../TrainINKML_v3/"
+with the training set 01. Then the .lg files will be saved in the directory "../seg_2"
+
+./crohme.py segment -i ../TrainINKML_v3 -e 2 -s 01 -o ../seg_2
+
+6. parsing:
+-----------
+usage: crohme.py parsing [-h] -i INPUT [-f FOLDS] [-b SYMBOLS]
+                         [-e {0,1,2,all}] [-s {01,02,12,all}] [-m MODEL]
+                         [-g SEGMODEL] [-d PARSINGMODEL] [-a SCALING]
+                         [-l SEGSCALING] [-n PARSINGSCALING] [-c PCA]
+                         [-r PARSINGPCA]
+                         [-p {1,2, ...,24}]
+                         -o OUTPUT
+
+
+segment, classify and parse the test data by the specified parameters
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUT, --input INPUT
+             (required) specify a test file or a directory which contains the
+                        test files
+  -f FOLDS, --folds FOLDS
+             (optional) specify the file which stores the splitting
+                        information. It's required when the testset is specified.
+                        if this option is not provided, the default value 
+                        "folds.dump" will be used                        
+  -b SYMBOLS, --symbols SYMBOLS
+             (optional) specify the file which store the symbols
+                        if this option is not provided, the default value 
+                        "symb.dump" will be used
+  -e {0,1,2,all}, --testset {0,1,2,all}
+             (optional) specify the set of testing data
+                        this option only works when input = train_data_directory
+  -s {01,02,12,all}, --trainset {01,02,12,all}
+             (optional) specify the set of training data
+                        if this option is not provided, the default value 
+                        "all" will be used
+  -m MODEL, --model MODEL
+             (optional) specify the model filename template for classification
+                        if this option is not provided, the default value 
+                        "svm_model_{}" will be used
+  -g SEGMODEL, --segmodel SEGMODEL
+             (optional) specify the model filename template for segmentation
+                        if this option is not provided, the default value 
+                        "seg_model_{}" will be used
+  -d PARSINGMODEL, --parsingmodel PARSINGMODEL
+             (optional) specify the model filename template for parsing
+                        if this option is not provided, the default value 
+                        "parsing_model_{}" will be used
+  -a SCALING, --scaling SCALING
+             (optional) specify the filename template which saves the scaling parameters
+                        if this option is not provided, the default value 
+                        "scaling_{}" will be used
+  -l SEGSCALING, --segscaling SEGSCALING
+             (optional) specify the filename template which saves the segmentation
+                        scaling parameters
+                        if this option is not provided, the default value 
+                        "seg_scaling_{}" will be used
+  -n PARSINGSCALING, --parsingscaling PARSINGSCALING
+             (optional) specify the filename template which saves the parsing
+                        scaling parameters
+                        if this option is not provided, the default value 
+                        "parsing_scaling_{}" will be used
+  -c PCA, --pca PCA 
+             (optional) specify the filename template which saves the PCA paramenters
+                        if this option is not provided, the default value 
+                        "PCA_{}.dump" will be used
+  -r PARSINGPCA, --parsingpca PARSINGPCA
+             (optional) specify the filename template which saves the PCA paramenters
+                        of parsing, if this option is not provided, the default value 
+                        "PCA_parsing_{}.dump" will be used
+  -p {1,2,3, ...,24}, --processes {1,2,3, ...,24}
+             (optional) specify the number of processes when extracting the
+                        features of stroke pairs. This number should be 
+                        equal or less than the number of virtual processors. 
+                        Command `$ cat /proc/cpuinfo` returns the CPU info
+                        on Linux. glados.cs.rit.edu has 8 virtual processors,
+                        so this number should be equal or less than 8 on it.
+                        if this option is not provided, the default value 
+                        "6" will be used
+  -o OUTPUT, --output OUTPUT
+             (required) specify the output filename or directory (depends on
+                        the input)
+
+Examples:
+---------
+(1). This command uses "../TrainINKML_v3/expressmatch/70_carlos.inkml" as input file,
+and perform segmentation, classification and parsing with the training set all, then 
+output to 70_carlos.lg.
+
+./crohme.py parsing -i ../TrainINKML_v3/expressmatch/70_carlos.inkml -s all -o 70_carlos.lg
+
+
+(2). This command will segment, classify and parse all the files in the directory "../TrainINKML_v3/" 
+with the training set all. Then the .lg files will be saved in the directory "../parsing_all"
+
+./crohme.py parsing -i ../TrainINKML_v3/ -s all -o ../parsing_all
+
+
+(3). This command will segment, classify and parse the folder 2 files in the directory "../TrainINKML_v3/"
+with the training set 01. Then the .lg files will be saved in the directory "../parsing_2"
+
+./crohme.py parsing -i ../TrainINKML_v3 -e 2 -s 01 -o ../parsing_2
+
+
+7. symbol
+---------
+usage: crohme.py symbol [-h] -i INPUT [-f FOLDS] [-b SYMBOLS] [-e {0,1,2,all}]
+                        [-s {01,02,12,all}] [-m MODEL] [-a SCALING] -o OUTPUT
+
+Classify the test data by the specified parameter 
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUT, --input INPUT
+             (required) specify a test file or a directory which contains the
+                        test files
+  -f FOLDS, --folds FOLDS
+             (optional) specify the file which stores the splitting
+                        information
+                        if this option is not provided, the default value 
+                        "folds.dump" will be used
+  -b SYMBOLS, --symbols SYMBOLS
+             (optional) specify the file which store the symbols
+                        if this option is not provided, the default value 
+                        "symb.dump" will be used
+  -e {0,1,2,all}, --testset {0,1,2,all}
+             (optional) specify the set of testing data
+                        this option only works when input = train_data_directory
+  -s {01,02,12,all}, --trainset {01,02,12,all}
+             (optional) specify the set of training data
+                        if this option is not provided, the default value 
+                        "all" will be used
+  -m MODEL, --model MODEL
+             (optional) specify the model filename template for classification
+                        if this option is not provided, the default value 
+                        "svm_model_{}" will be used
+  -a SCALING, --scaling SCALING
+             (optional) specify the filename template which saves the scaling parameters
+                        if this option is not provided, the default value 
+                        "scaling_{}" will be used
+  -o OUTPUT, --output OUTPUT
+             (required) specify the output filename
+
+
+Examples:
+---------
+This command will classify all the files in the directory "../Task1test/" with 
+with the training set all. Then the results will be saved in the file "../task1.txt"
+
+./crohme.py classify -i ../Task1test/ -s all -o ../task1.txt
+
+
+
 

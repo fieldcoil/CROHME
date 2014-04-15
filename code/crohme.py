@@ -1829,7 +1829,7 @@ def symbol(args):
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(description="Classifier for CSCI-737 Pattern Recognition Project #3.")
+    parser = argparse.ArgumentParser(description="Classifier for CROHME 2014")
     subparsers = parser.add_subparsers(help = "Please specify the command")
     
     parser_split = subparsers.add_parser('split', help="split the training data into three folds")
@@ -1905,7 +1905,7 @@ if __name__ == '__main__':
     parser_parsing.add_argument("-o", "--output", required=True, help="specify the output filename or directory (depends on the input)")
     parser_parsing.set_defaults(func=parsing)
     
-    parser_symbol = subparsers.add_parser('symbol', help="classify the test data by the specified classifier and parameter")
+    parser_symbol = subparsers.add_parser('symbol', help="classify the test data by the specified parameter")
     parser_symbol.add_argument("-i", "--input", required=True, help="specify a test file or a directory which contains the test files")
     parser_symbol.add_argument("-f", "--folds", help="specify the file which stores the splitting information")
     parser_symbol.add_argument("-b", "--symbols", default="symb.dump", help="specify the file which store the symbols")
@@ -1913,7 +1913,7 @@ if __name__ == '__main__':
     parser_symbol.add_argument("-s", "--trainset", choices=['01','02','12','all'], default='all', help="specify the set of training data")
     parser_symbol.add_argument("-m", "--model", default="svm_model_{}", help="specify the model file for classification")
     parser_symbol.add_argument("-a", "--scaling", default="scaling_{}",  help="specify the file which saves the scaling parameters")
-    parser_symbol.add_argument("-o", "--output", required=True, help="specify the output filename or directory (depends on the input)")
+    parser_symbol.add_argument("-o", "--output", required=True, help="specify the output filename")
     parser_symbol.set_defaults(func=symbol)
     
        
