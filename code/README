@@ -18,7 +18,7 @@ Thanks to the authors: H. Mouchère and R. Zanibbi
 This program uses libsvm to perform SVM classifictaion.
 http://www.csie.ntu.edu.tw/~cjlin/libsvm/
 
-Thanks to the authors: Chih-Chung Chang and Chih-Jen Lin 
+Thanks to the authors: Chih-Chung Chang and Chih-Jen Lin
 
 
 File list:
@@ -54,6 +54,9 @@ libsvm-3.17.tar.gz  : The source code of libsvm
   parsing_model_{set}: The model of parsing. The possible values of 
                       {set} are: 01, 02, 12, all 
   scaling_{set}     : The scaling parameter for scale feature matrices
+                      The possible values of {set} are: 01, 02, 12, all  
+  seg_scaling_{set} : The scaling parameter for scale segmentation feature 
+                      matrices
                       The possible values of {set} are: 01, 02, 12, all  
   parsing_scaling_{set}: The scaling parameter for scale parsing feature 
                       matrices
