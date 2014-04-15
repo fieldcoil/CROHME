@@ -44,6 +44,8 @@ Nfolds = 3;
 
 nSegPCA = 100
 
+JunkProb = 0.5
+
 __location__ = os.path.realpath(os.path.join(os.getcwd(), \
 os.path.dirname(__file__)))
 
@@ -462,8 +464,8 @@ def formFeature(im, symbDict):
     idxList = []
     for (key,symb) in im.symbol.iteritems():
         k ="{}_{}".format(im.filename,key)
-        if im.symbolTruth.has_key(key):
-            y = symbDict[im.symbolTruth[key]['lab']]
+        if im.symbol.has_key(key) and symbDict.has_key(im.symbol[key]['lab']):
+            y = symbDict[im.symbol[key]['lab']]
         else:
             y = 0
         x = {}
@@ -801,6 +803,80 @@ def genParsingTrainDataSet(IMs, Imid):
     return (trainningY, trainningX, trainningIdx)
 # end of genSegTrainDataSet
 
+
+def formSymbolFeature(im, symbDict):
+    xList = []
+    yList = []
+    idxList = []
+    for (key,symb) in im.symbol.iteritems():
+        k =im.UI
+        if im.symbol.has_key(key) and symbDict.has_key(im.symbol[key]['lab']):
+            y = symbDict[im.symbol[key]['lab']]
+        else:
+            y = 0
+        x = {}
+        fIdx = 1
+        fList = []
+        for fKey in featureList:
+            fList.extend(symb['features'][fKey])
+            
+        for a in fList:
+            x[fIdx] = float(a)
+            fIdx += 1
+        xList.append(x)
+        yList.append(y)
+        idxList.append(k)
+    return (xList, yList, idxList)
+# end of formFeature
+
+
+def genSymbolTestDataSet(IMs, symbDict):
+    testingX = []
+    testingY = []
+    testingIdx = []
+
+    for im in IMs:
+        # testing
+        x,y,f = formSymbolFeature(im, symbDict)
+        testingX.extend(x)
+        testingY.extend(y)
+        testingIdx.extend(f)
+
+    return (testingY, testingX, testingIdx)
+# end of genTestDataSet
+
+def writeTask1(filename, aY, p_val, m, eIdx, symbDict):
+    output = open(filename, 'w')
+    for i in [s[0] for s in sorted(enumerate(eIdx), key=lambda x:int(x[1].split('_')[-1]))]:
+        top = [s for s in sorted(enumerate(p_val[i]), key=lambda x:x[1], reverse=True)]
+        line1 = eIdx[i];
+        line2 = 'scores';
+        
+        outCount = 0
+        idx = 0
+        outJunk = False
+        while outCount < 10:
+            resIdx = top[idx][0]
+            resProb = top[idx][1]
+            
+            if (not outJunk) and (resProb < JunkProb):
+                line1 += ',Junk'
+                line2 += ',{}'.format(JunkProb)
+                outJunk = True
+            else:
+                symbLabel = findSymbByValue(symbDict, resIdx)
+                if symbLabel == ',':
+                    symbLabel = 'COMMA'
+                line1 += ',{}'.format(symbLabel)
+                line2 += ',{}'.format(resProb)
+                idx += 1
+            
+            outCount += 1
+        output.write(line1 + '\n')
+        output.write(line2 + '\n')
+    
+    output.close()
+# end of writeTask1(output, aY, eIdx, symbDict)
 
 def split(args):
     
@@ -1660,6 +1736,97 @@ def parsing(args):
 # end of parsing
 
 
+def symbol(args):
+    inputPath = args.input
+    
+    symbfile = args.symbols
+    assert os.path.isfile(symbfile), "The symbols file is not exist!"
+     
+    output = args.output
+         
+    foldsfile = args.folds
+     
+    testset = args.testset
+    trainset = args.trainset
+
+    modelfile = args.model.format(trainset)
+    assert os.path.isfile(modelfile), "The model file is not exist!"
+    
+    scalingfile = args.scaling.format(trainset)
+    assert os.path.isfile(scalingfile), "The scaling parameter file is not exist!"
+
+    
+    h_symbfile = open(symbfile, 'r')
+    symb = pickle.load(h_symbfile)
+    h_symbfile.close()
+    
+    symbDict = symb[1]
+    
+    if os.path.isdir(inputPath):
+        AllTrainData = readAllTrainData(inputPath)
+        symbDict = symb[1]
+         
+        if foldsfile:
+            assert os.path.isfile(foldsfile), "The folds file is not exist!"
+            h_foldsfile = open(foldsfile, 'r')
+            folds = pickle.load(h_foldsfile)
+            h_foldsfile.close()
+            
+            print "apply the fold on training data ...",
+            applyFolds(AllTrainData, folds)
+            print "Done!"
+            
+            testData = [IM for IM in AllTrainData if IM.fold == int(testset)]
+        else:
+            testData = AllTrainData
+        
+        for IM in testData:
+            IM.genFeatures()
+            
+        eY, eX, eIdx = genSymbolTestDataSet(testData, symbDict)
+        
+    elif os.path.isfile(inputPath):
+        im = InkML.InkML(inputPath)
+        im.genFeatures()
+        eX,eY,eIdx = formFeature(im, symbDict)
+        testData = [im]
+    else:
+        raise NameError, 'Unknown input.'
+    
+    
+    assert os.path.isfile(scalingfile), "The scaling parameter file is not exist!"
+    h_scalingfile = open(scalingfile, 'r')
+    scaling_cof = pickle.load(h_scalingfile)
+    h_scalingfile.close()
+       
+    scaleData(eX, scaling_cof)
+
+    m = svmutil.svm_load_model(modelfile)
+
+    start = time.clock()
+    aY, p_acc, p_val = svmutil.svm_predict(eY, eX, m, '-b 1')
+    elapsed = (time.clock() - start)
+    
+    print "Classification time: {}".format(elapsed)
+    
+    writeTask1(output, aY, p_val, m, eIdx, symbDict)
+
+#     applyResults(testData, aY, eIdx, symbDict)
+#     
+#     if os.path.isdir(inputPath):
+#         for im in testData:
+#             filename = os.path.basename(im.filename)
+#             outfile = filename.lower().replace('.inkml', '.lg')
+#             outpath = os.path.join(output,outfile)
+#             
+#             if not os.path.exists(os.path.dirname(outpath)):
+#                 os.makedirs(os.path.dirname(outpath))
+#             writeLG(outpath, im)
+#     elif os.path.isfile(inputPath):
+#         writeLG(output, testData[0])
+    
+# end of symbol
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description="Classifier for CSCI-737 Pattern Recognition Project #3.")
@@ -1737,6 +1904,18 @@ if __name__ == '__main__':
     parser_parsing.add_argument("-p", "--processes", default=6, type=int, choices=range(1, 25), help="specify the number of processes when extracting the features of stroke pairs")
     parser_parsing.add_argument("-o", "--output", required=True, help="specify the output filename or directory (depends on the input)")
     parser_parsing.set_defaults(func=parsing)
+    
+    parser_symbol = subparsers.add_parser('symbol', help="classify the test data by the specified classifier and parameter")
+    parser_symbol.add_argument("-i", "--input", required=True, help="specify a test file or a directory which contains the test files")
+    parser_symbol.add_argument("-f", "--folds", help="specify the file which stores the splitting information")
+    parser_symbol.add_argument("-b", "--symbols", default="symb.dump", help="specify the file which store the symbols")
+    parser_symbol.add_argument("-e", "--testset", choices=['0','1','2','all'], help="specify the set of testing data")
+    parser_symbol.add_argument("-s", "--trainset", choices=['01','02','12','all'], default='all', help="specify the set of training data")
+    parser_symbol.add_argument("-m", "--model", default="svm_model_{}", help="specify the model file for classification")
+    parser_symbol.add_argument("-a", "--scaling", default="scaling_{}",  help="specify the file which saves the scaling parameters")
+    parser_symbol.add_argument("-o", "--output", required=True, help="specify the output filename or directory (depends on the input)")
+    parser_symbol.set_defaults(func=symbol)
+    
        
     args = parser.parse_args()
     args.func(args)

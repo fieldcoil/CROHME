@@ -224,6 +224,7 @@ class InkML(object):
         # it looks that register_namespace doesn't work
         ET.register_namespace('ns', 'http://www.w3.org/2003/InkML')
         ET.register_namespace('xml', 'http://www.w3.org/XML/1998/namespace')
+        tree = ET.parse(filename)
         try:
             tree = ET.parse(filename)
         except ET.ParseError:
@@ -389,6 +390,14 @@ class InkML(object):
     def genFeatures(self):
         
         print "Extract features from file: {} ...".format(self.filename),
+        
+        # for crohme task 1, if there is no symbol section in the inkml file, add it
+        if len(self.symbol) == 0 :
+            sid = 'AUTO_0'
+            strks = sorted(self.stroke.keys(), key=int)
+            symb = {'strokes':strks, 'features':{}, 'lab': ''}
+            self.symbol = {sid:symb}
+
         # preprocessing
         # 1. Duplicate point filtering
         for stroke in self.stroke.itervalues():
@@ -416,6 +425,7 @@ class InkML(object):
         # get original height of expression and width of each symbol
 #         exp_orig_max_X = np.max(self.symbol.values()[0]['trace'][0][:,0])
 #         exp_orig_min_X = np.min(self.symbol.values()[0]['trace'][0][:,0])
+
         exp_orig_max_Y = np.max(self.stroke[self.symbol.values()[0]['strokes'][0]]['trace'][:,1])
         exp_orig_min_Y = np.min(self.stroke[self.symbol.values()[0]['strokes'][0]]['trace'][:,1])
         for symbol in self.symbol.itervalues():
@@ -2522,26 +2532,29 @@ def XMLindent(elem, level=0):
 if __name__ == '__main__':
     import os
     import pickle
-    im1 = InkML('../TrainingData/CROHME2013_test/rit_4295_2.inkml')
+    im1 = InkML('../task1/folder_0/symbol108.inkml')
+    im1.genFeatures()
+    
+    print im1.symbol
     # im1 = InkML('../TrainINKML_v3/MathBrush/2009210-947-105.inkml')
     # im1 = InkML('../TrainINKML_v3/KAIST/traindata2_25_sub_88.inkml')
 
-    filename = os.path.basename(im1.filename)
-    filename = '{}.pickle'.format(filename)
-    h = open(filename, 'r')
-    im1.symbList = pickle.load(h)
-    im1.symbol = pickle.load(h)
-    im1.stroke = pickle.load(h)
-    h.close()
-    for s in im1.symbList:
-        print s['lab'],
-    print
-    
-    im1.symbList2XML()
-    
-    h = open('test.lg', 'w')
-    im1.printLG(h)
-    h.close
+#     filename = os.path.basename(im1.filename)
+#     filename = '{}.pickle'.format(filename)
+#     h = open(filename, 'r')
+#     im1.symbList = pickle.load(h)
+#     im1.symbol = pickle.load(h)
+#     im1.stroke = pickle.load(h)
+#     h.close()
+#     for s in im1.symbList:
+#         print s['lab'],
+#     print
+#     
+#     im1.symbList2XML()
+#     
+#     h = open('test.lg', 'w')
+#     im1.printLG(h)
+#     h.close
 
     
 
