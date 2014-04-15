@@ -3,7 +3,7 @@
 echo "Start zipping..."
 cp code/README README
 
-zip CROHME2014_Wang\&Yao_$1.zip README \
+zip CROHME2014_Wang\&Yao_v$1.zip README \
 	libsvm-3.17.tar.gz \
 	code/crohme.py \
 	code/InkML.py \
