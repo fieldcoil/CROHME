@@ -1,0 +1,130 @@
+%  article.tex (Version 3.3, released 19 January 2008)
+%  Article to demonstrate format for SPIE Proceedings
+%  Special instructions are included in this file after the
+%  symbol %>>>>
+%  Numerous commands are commented out, but included to show how
+%  to effect various options, e.g., to print page numbers, etc.
+%  This LaTeX source file is composed for LaTeX2e.
+
+%  The following commands have been added in the SPIE class
+%  file (spie.cls) and will not be understood in other classes:
+%  \supit{}, \authorinfo{}, \skiplinehalf, \keywords{}
+%  The bibliography style file is called spiebib.bst,
+%  which replaces the standard style unstr.bst.
+
+\documentclass[]{spie}  %>>> use for US letter paper
+%%\documentclass[a4paper]{spie}  %>>> use this instead for A4 paper
+%%\documentclass[nocompress]{spie}  %>>> to avoid compression of citations
+%% \addtolength{\voffset}{9mm}   %>>> moves text field down
+%% \renewcommand{\baselinestretch}{1.65}   %>>> 1.65 for double spacing, 1.25 for 1.5 spacing
+%  The following command loads a graphics package to include images
+%  in the document. It may be necessary to specify a DVI driver option,
+%  e.g., [dvips], but that may be inappropriate for some LaTeX
+%  installations.
+\usepackage[]{graphicx}
+\usepackage[] {morefloats}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
+\usepackage{cite}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{multirow}
+\usepackage{rotating}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{bm}
+\usepackage{amsfonts}
+\usepackage{longtable}
+\usepackage{enumerate}
+\usepackage{fancyvrb}
+\usepackage{url}
+
+
+\title{Recognition of Online Handwritten Mathematical Expressions}
+
+%>>>> The author is responsible for formatting the
+%  author list and their institutions.  Use  \skiplinehalf
+%  to separate author list from addresses and between each address.
+%  The correspondence between each author and his/her address
+%  can be indicated with a superscript in italics,
+%  which is easily obtained with \supit{}.
+
+\author{Wei Yao and Fan Wang
+}
+
+%>>>> Further information about the authors, other than their
+%  institution and addresses, should be included as a footnote,
+%  which is facilitated by the \authorinfo{} command.
+
+%\authorinfo{Further author information: (Send correspondence to A.A.A.)\\A.A.A.: E-mail: aaa@tbk2.edu, Telephone: 1 505 123 1234\\  B.B.A.: E-mail: bba@cmp.com, Telephone: +33 (0)1 98 76 54 32}
+%%%>>>> when using amstex, you need to use @@ instead of @
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%>>>> uncomment following for page numbers
+% \pagestyle{plain}
+%>>>> uncomment following to start page numbering at 301
+%\setcounter{page}{301}
+
+\begin{document}
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Design}
+
+Recognition of mathematical expressions includes three major steps: symbol segmentation, symbol recognition and structural analysis.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Symbol Segmentation}
+
+The segmentation method is based on Hu's Paper\cite{Lei2013}. 
+The base assumption is that a symbol can only contain successive strokes. 
+Given an expression with n strokes, the segmentation method just considers merging or 
+splitting the $n-1$ stroke pairs: ($S_1$,$S_2$),($S_2$,$S_3$),...,($S_{n-1}$,$S_{n}$).
+
+Expressions  undergo a series of processing steps: duplicate points elimination, smoothing, 
+size normalization, resampling to reduce variation in the handwritten 
+texts\cite{Lei2011}\cite{Lei2013}. 
+Then for each stroke pair, we extract 405 features which can be grouped into three types: the geometric features(23), multi-scale shape context features (180), and the classification probabilities(202). All the feature range is scaled. After the feature extraction, principal component analysis (PCA) is used for dimensionality reduction. The first 100 components are used to train the Support Vector Machine(SVM) classifier\cite{chang2011}. Radial basis function(RBF) kernel is selected. Cross validation and grid-search is used to find the optimal parameter pair $(C,\gamma)$.
+
+\subsection{Symbol Recognition}
+
+Symbol recognition normally includes several preprocessing steps: duplicate points elimination, smoothing, resampling and size normalization. The recognition performance depends largely on the quality of the features. The five selected features: pen-up/down, the density in the center of the $3\times 3$ matrix, normalized y-coordinate, sine of curvature and cosine of vicinity from slopeLiwicki et al's research\cite{Marcus2009} are the top choices to start with. Two extra features: normalized width and number of points are added based on the preliminary classification results. SVM classifiers are then performed. Note that all the feature range is scaled before classification. For SVM classifier, RBF kernel is selected. Cross validation and grid-search is used to find the optimal parameter pair.
+
+\subsection{Parsing Handwritten Expressions}
+
+
+The results of segmentation and classification are used as input symbols. The first part of parsing 
+solves the ``strong'' geometric relationships (``A'' (above), ``B'' (bellow) and  ``I'' (inside) ).
+ To solve the ``A'' and ``B'' spatial relationship, we first search the symbol 
+list to see whether ``$-$'' exits. If ``-'' exits, we then check all the symbols to see if they are 
+horizontal overlapped with symbol ``$-$''. If they are overlapped, the ``A'' and ``B''
+spatial relationship will be identified. The next mission is to solve the ``I'' spatial relationship. 
+We first search the symbols list to see if the root symbol(``$\sqrt{}$'') exits, then we check all the symbols 
+to see if they are horizontal overlapped with the root symbol,  the ``I'' spatial 
+relationship is identified.
+
+After the previous step, an expression is split into several sub-expressions (numerator and 
+denominator of a fraction, base of a square root, and rest symbols) which doesn't contain
+  ``A'', ``B'', and ``I'' relationships. 
+  Then, the shape features Polar Histograms\cite{Alvaro2013} is introduced to solve the 
+``weak'' geometric relationships (``R" (Right), ``sup" (superscript) and ``sub" (subscript)).
+A polar histogram layout descriptor in 15 (distance) $\times$ 20 (angle) resolution is used 
+to generate 300 features for each two adjacent symbols. After PCA reduction,  SVM classifier is 
+employed  to distinguish 7 relationships: right, begin SUP, begin SUB, end SUP, 
+end SUB, SUP to SUB, and SUB to SUP.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% References %%%%%
+
+\bibliography{dirsig}
+\bibliographystyle{spiebib}   %>>>> makes bibtex use spiebib.bst
+
+\end{document}
