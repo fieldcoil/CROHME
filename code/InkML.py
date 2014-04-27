@@ -193,7 +193,7 @@ class InkML(object):
     '''
 
 
-    def __init__(self, filename):
+    def __init__(self, filename, loadGT=True):
         '''
         Constructor
         '''
@@ -239,11 +239,12 @@ class InkML(object):
         for ann in root.iter('{0}annotation'.format(namespace)):
             if ann.attrib.has_key('type') and ann.attrib['type'] == "UI":
                 self.UI = ann.text
-                 
-        annXML = root.find('{0}annotationXML'.format(namespace))
-        if (annXML != None) and (len(annXML) > 0):
-            Load_xml_truth(self.XML_GT, annXML[0])
-            norm_mathMLNorm(self.XML_GT);
+        
+        if loadGT:
+            annXML = root.find('{0}annotationXML'.format(namespace))
+            if (annXML != None) and (len(annXML) > 0):
+                Load_xml_truth(self.XML_GT, annXML[0])
+                norm_mathMLNorm(self.XML_GT);
         
         for trace in root.iter('{0}trace'.format(namespace)):
             strk = {}
@@ -252,29 +253,30 @@ class InkML(object):
          
         #symbol ID, to distinguish different symbols with same label, if symbol without any annotationXML
         symbID = 0;
-        group = root.find('{0}traceGroup'.format(namespace))
-        if (group != None):
-            for subgroup in group.findall('{0}traceGroup'.format(namespace)):
-                 
-                lab = subgroup.find('{0}annotation'.format(namespace)).text
-                annXML_G = subgroup.find('{0}annotationXML'.format(namespace))
-                sid = ''
-                if (annXML_G is not None) and annXML_G.attrib.has_key('href'):
-                    sid = annXML_G.attrib['href']
-                if sid == '':
-                    sid = "AUTO_{}".format(symbID)
-                 
-                strokeList = []
-                 
-                for traceView in subgroup.findall('{0}traceView'.format(namespace)):
-                    self.strokeTruth[traceView.attrib['traceDataRef']]['id'] = sid
-                    self.strokeTruth[traceView.attrib['traceDataRef']]['lab'] = lab
-                    strokeList.append(traceView.attrib['traceDataRef'])
-                 
-                if len(strokeList) > 0:
-                    symb = {'lab': lab, 'strokes': strokeList}
-                    self.symbolTruth[sid] = symb
-                    symbID += 1
+        if loadGT:
+            group = root.find('{0}traceGroup'.format(namespace))
+            if (group != None):
+                for subgroup in group.findall('{0}traceGroup'.format(namespace)):
+                    
+                    lab = subgroup.find('{0}annotation'.format(namespace)).text
+                    annXML_G = subgroup.find('{0}annotationXML'.format(namespace))
+                    sid = ''
+                    if (annXML_G is not None) and annXML_G.attrib.has_key('href'):
+                        sid = annXML_G.attrib['href']
+                    if sid == '':
+                        sid = "AUTO_{}".format(symbID)
+                     
+                    strokeList = []
+                     
+                    for traceView in subgroup.findall('{0}traceView'.format(namespace)):
+                        self.strokeTruth[traceView.attrib['traceDataRef']]['id'] = sid
+                        self.strokeTruth[traceView.attrib['traceDataRef']]['lab'] = lab
+                        strokeList.append(traceView.attrib['traceDataRef'])
+                     
+                    if len(strokeList) > 0:
+                        symb = {'lab': lab, 'strokes': strokeList}
+                        self.symbolTruth[sid] = symb
+                        symbID += 1
                 
         self.NBSYMB = symbID
         
@@ -2532,8 +2534,8 @@ def XMLindent(elem, level=0):
 if __name__ == '__main__':
     import os
     import pickle
-    im1 = InkML('../task1/folder_0/symbol108.inkml')
-    im1.genFeatures()
+    im1 = InkML('../CROHME_full_v2/CROHME2013_data/TestINKML/103_em_0.inkml', loadGT=False)
+    im1.formPair()
     
     print im1.symbol
     # im1 = InkML('../TrainINKML_v3/MathBrush/2009210-947-105.inkml')

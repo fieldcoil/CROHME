@@ -341,10 +341,10 @@ def generateTGLG():
 
 # end of generateTGLG()
 
-def readAllTrainData(Path):
+def readAllTrainData(Path, loadGT=True):
     TrainDataList = [];
     buildTrainDataList(Path, '', TrainDataList)
-    TrainData = [InkML.InkML(os.path.join(Path,f)) for f in TrainDataList]
+    TrainData = [InkML.InkML(os.path.join(Path,f), loadGT) for f in TrainDataList]
     return TrainData
 # end of readAllTrainData
 
@@ -1584,7 +1584,7 @@ def parsing(args):
                    'mFile':     parsingmodelfile}
     
     if os.path.isdir(inputPath):
-        AllTrainData = readAllTrainData(inputPath)
+        AllTrainData = readAllTrainData(inputPath, loadGT=False)
         symbDict = symb[1]
          
         if foldsfile:
@@ -1617,7 +1617,7 @@ def parsing(args):
         segY, segX, segIdx = genSegTestDataSet(testData)
         
     elif os.path.isfile(inputPath):
-        im = InkML.InkML(inputPath)
+        im = InkML.InkML(inputPath, loadGT=False)
         im.formPair()
         im.loadPairTruth()
         segX,segY,segIdx = formSegFeature(im)
@@ -1763,7 +1763,7 @@ def symbol(args):
     symbDict = symb[1]
     
     if os.path.isdir(inputPath):
-        AllTrainData = readAllTrainData(inputPath)
+        AllTrainData = readAllTrainData(inputPath, loadGT=False)
         symbDict = symb[1]
          
         if foldsfile:
@@ -1786,7 +1786,7 @@ def symbol(args):
         eY, eX, eIdx = genSymbolTestDataSet(testData, symbDict)
         
     elif os.path.isfile(inputPath):
-        im = InkML.InkML(inputPath)
+        im = InkML.InkML(inputPath, loadGT=False)
         im.genFeatures()
         eX,eY,eIdx = formFeature(im, symbDict)
         testData = [im]
