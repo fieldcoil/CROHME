@@ -638,11 +638,12 @@ def applySegResults(IMs, Y, eIdx):
                 im.stroke[strkId]['id'] = sId
                 im.stroke[strkId]['lab'] = ''
         else:
+            strkId = im.stroke.keys()[0];
             sId = "AUTO_{}".format(sidx)
-            s = {'strokes':['0'], 'lab':'', 'features':{}}
+            s = {'strokes':[strkId], 'lab':'', 'features':{}}
             symbs[sId] = s
-            im.stroke['0']['id'] = sId
-            im.stroke['0']['lab'] = ''
+            im.stroke[strkId]['id'] = sId
+            im.stroke[strkId]['lab'] = ''
         im.symbol = symbs
 # end of applySegResults
 
