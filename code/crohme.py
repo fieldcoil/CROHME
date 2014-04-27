@@ -853,15 +853,17 @@ def writeTask1(filename, aY, p_val, m, eIdx, symbDict):
         line1 = eIdx[i];
         line2 = 'scores';
         
+        print aY[i], top[0][0]
+        
         outCount = 0
         idx = 0
         outJunk = False
-        while outCount < 10:
+        while outCount < 1:
             resIdx = top[idx][0]
             resProb = top[idx][1]
             
             if (not outJunk) and (resProb < JunkProb):
-                line1 += ',Junk'
+                line1 += ',junk'
                 line2 += ',{}'.format(JunkProb)
                 outJunk = True
             else:
@@ -874,7 +876,7 @@ def writeTask1(filename, aY, p_val, m, eIdx, symbDict):
             
             outCount += 1
         output.write(line1 + '\n')
-        output.write(line2 + '\n')
+        #output.write(line2 + '\n')
     
     output.close()
 # end of writeTask1(output, aY, eIdx, symbDict)
