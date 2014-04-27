@@ -616,7 +616,7 @@ def applySegResults(IMs, Y, eIdx):
         symbs = {}
         sidx = 0
         if im.hasPair:
-            cur = ['0']
+            cur = im.pair[0]['strokes'][:1]
             for p in im.pair:
 #             for p in sorted(im.pair, key=lambda k: [int(k['strokes'][0])]):
                 p['result'] = int(Y[idx["{}_{}".format(im.filename,p['strokes'][0])]])
